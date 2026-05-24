@@ -48,6 +48,24 @@
 - [x] SQLite migration versionとresult review / reference削除の永続化テストを追加。
 - [x] Structured Outputsのschema検証をPydanticで型検証するよう補強。
 
+## 販売品質再監査 2026-05-24
+
+添付開発指示書と6枚の参考画像を再確認し、顧客が制作サイクルを実運用する観点で以下を追加補強した。
+
+- [x] Composer各Blockに `AI補完`、`候補`、`専門語化`、`短縮`、`説明` を追加。
+- [x] 入力停止後の自動AI提案をdebounce付きでJob Queueへ流し、古い結果を破棄する。
+- [x] Prompt Compiler AgentをCompile導線へ接続し、決定論的Compile後に非同期レビューを表示する。
+- [x] ToolbarにUndo/Redoを追加し、PromptDocument状態をrevision付きで復元する。
+- [x] Free Editorの変換ボタンをLLM Jobへ接続し、左右エディタとライブプレビューを実操作化する。
+- [x] Parameter Advisorの目的入力、AI提案、確認付き適用を実装する。
+- [x] 採用されたAI Patch語彙をUser Vocabulary Profileへ保存する。
+- [x] Reference Libraryでローカル画像メタデータ、簡易カラーパレット、プレビュー、Reference Modeフィルターを表示する。
+- [x] Result Reviewで画像プレビュー、Source Prompt、Parameters Snapshotを表示する。
+- [x] ExportをPrompt only、Markdown record、JSON snapshot、CSV/Markdown matrix variantsへ拡張する。
+- [x] Settings保存時にPrivacy modeを実行中設定へ反映し、OS資格情報ストアが使える場合のみAPIキーを保存する。
+- [x] `make package` によるPython配布パッケージ作成入口を追加する。
+- [x] 追加機能のUnit/UI smoke testを補強する。
+
 ## マイルストーン
 
 - [x] Task 1: アプリ基盤、UIシェル、Ruleset基盤、永続化を実装する。
@@ -106,3 +124,12 @@
 | 2026-05-24 | `make test` | Done | 再監査改修後、pytest: 14 passed |
 | 2026-05-24 | `make build` | Done | 再監査改修後、compileall成功 |
 | 2026-05-24 | `.venv/bin/python scripts/verify_ui_text.py` | Done | UI/resources走査で禁止UI文言なし |
+| 2026-05-24 | `.venv/bin/python -m pip install --force-reinstall --no-cache-dir -e ".[dev]"` | Done | 既存venvのアーキテクチャ不一致を修復し、build依存を追加 |
+| 2026-05-24 | `make lint` | Done | 販売品質再監査後、ruff: All checks passed |
+| 2026-05-24 | `make typecheck` | Done | 販売品質再監査後、mypy: no issues found in 56 source files |
+| 2026-05-24 | `make test` | Done | 販売品質再監査後、pytest: 16 passed |
+| 2026-05-24 | `make build` | Done | 販売品質再監査後、compileall成功 |
+| 2026-05-24 | `make package` | Done | sdist / wheel作成成功、`dist/` はgitignore対象 |
+| 2026-05-24 | `.venv/bin/python scripts/verify_ui_text.py` | Done | UI/resources走査で禁止UI文言なし |
+| 2026-05-24 | `git status --short --ignored` | Done | DB、ユーザー画像、APIキー、生成パッケージは未追跡またはignore対象 |
+| 2026-05-24 | `rg -n "\\b[Vv]\\s*[0-9]+(\\.[0-9]+)?\\b|Midjourney\\s+[Vv]" src README.md docs plans \|\| true` | Done | 禁止表記ヒットなし |

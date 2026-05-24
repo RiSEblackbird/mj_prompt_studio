@@ -37,6 +37,27 @@ class ReferenceAnalysis:
 
 
 @dataclass
+class ImageMetadata:
+    width: int = 0
+    height: int = 0
+    format_name: str = ""
+    file_size_bytes: int = 0
+    dominant_colors: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ImageMetadata:
+        if not isinstance(data, dict):
+            return cls()
+        return cls(
+            width=int(data.get("width", 0) or 0),
+            height=int(data.get("height", 0) or 0),
+            format_name=str(data.get("format_name", "")),
+            file_size_bytes=int(data.get("file_size_bytes", 0) or 0),
+            dominant_colors=[str(item) for item in data.get("dominant_colors", [])],
+        )
+
+
+@dataclass
 class ReferenceAsset:
     id: str
     project_id: str
@@ -46,6 +67,7 @@ class ReferenceAsset:
     external_url: str | None = None
     tags: list[str] = field(default_factory=list)
     ai_analysis: ReferenceAnalysis = field(default_factory=ReferenceAnalysis)
+    image_metadata: ImageMetadata = field(default_factory=ImageMetadata)
     notes: str = ""
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)
@@ -79,6 +101,7 @@ class ReferenceAsset:
             external_url=_optional_string(data.get("external_url")),
             tags=[str(item) for item in data.get("tags", [])],
             ai_analysis=ReferenceAnalysis.from_dict(dict(data.get("ai_analysis", {}))),
+            image_metadata=ImageMetadata.from_dict(data.get("image_metadata")),
             notes=str(data.get("notes", "")),
             created_at=_parse_datetime(str(data.get("created_at"))),
             updated_at=_parse_datetime(str(data.get("updated_at"))),
@@ -99,6 +122,7 @@ class ResultImage:
     local_path: str
     prompt_snapshot: str
     parameters_snapshot: dict[str, Any]
+    image_metadata: ImageMetadata = field(default_factory=ImageMetadata)
     created_at: datetime = field(default_factory=utc_now)
 
     @classmethod
@@ -133,6 +157,7 @@ class ResultImage:
             local_path=str(data["local_path"]),
             prompt_snapshot=str(data["prompt_snapshot"]),
             parameters_snapshot=dict(data.get("parameters_snapshot", {})),
+            image_metadata=ImageMetadata.from_dict(data.get("image_metadata")),
             created_at=_parse_datetime(str(data.get("created_at"))),
         )
 

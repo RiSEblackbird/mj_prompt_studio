@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test build run clean
+.PHONY: format lint typecheck test build package run clean
 
 PYTHON ?= $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 
@@ -17,6 +17,9 @@ test:
 
 build:
 	$(PYTHON) -m compileall -q src
+
+package:
+	$(PYTHON) -m build
 
 run:
 	$(PYTHON) -m mj_prompt_studio.app.main

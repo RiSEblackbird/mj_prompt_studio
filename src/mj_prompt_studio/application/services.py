@@ -30,6 +30,7 @@ from mj_prompt_studio.domain.reference import (
 from mj_prompt_studio.domain.ruleset import GenerationRuleset
 from mj_prompt_studio.domain.validator import PromptValidator
 from mj_prompt_studio.infra.asset_store import AssetStore
+from mj_prompt_studio.infra.image_probe import probe_image
 from mj_prompt_studio.infra.sqlite_repository import ProjectRecord, SQLiteRepository
 from mj_prompt_studio.llm.orchestrator import AgentResult, LLMOrchestrator
 
@@ -127,6 +128,19 @@ class PromptWorkflowService:
     def request_vocabulary(self, text: str) -> AgentResult:
         return self.orchestrator.run_agent("VocabularyAgent", {"text": text})
 
+    def request_compile_review(self, document: PromptDocument) -> AgentResult:
+        return self.orchestrator.run_agent(
+            "PromptCompilerAgent",
+            {
+                "compiled_prompt": document.compiled_prompt,
+                "validation": asdict(document.validation_report)
+                if document.validation_report
+                else {},
+                "ruleset": self.ruleset.display_name,
+            },
+            previous_response_id=document.llm_context.latest_response_id,
+        )
+
     def apply_patch(self, document: PromptDocument, patch: PromptPatch) -> PromptDocument:
         if not patch.field_path.startswith("blocks."):
             raise ValueError(f"Unsupported patch path: {patch.field_path}")
@@ -134,10 +148,28 @@ class PromptWorkflowService:
         if not hasattr(document.blocks, field_name):
             raise ValueError(f"Unknown block field: {field_name}")
         setattr(document.blocks, field_name, patch.new_value)
+        self._record_vocab_acceptance(patch.old_value, patch.new_value)
         return self.compile_document(document, source="ai_patch", diff_summary=patch.reason)
 
     def validate(self, document: PromptDocument) -> ValidationReport:
         return self.validator.validate(document, self.ruleset)
+
+    def _record_vocab_acceptance(self, old_value: Any, new_value: Any) -> None:
+        if not isinstance(new_value, str):
+            return
+        source = str(old_value or "").strip() or "_general"
+        profile = self.repository.load_user_vocab_profile()
+        entry = profile.setdefault(
+            source,
+            {"preferred_terms": [], "rejected_terms": []},
+        )
+        preferred_terms = entry.setdefault("preferred_terms", [])
+        existing = {str(item) for item in preferred_terms}
+        for term in _split_terms(new_value):
+            if term not in existing:
+                preferred_terms.append(term)
+                existing.add(term)
+        self.repository.save_user_vocab_profile(profile)
 
 
 class ReferenceWorkflowService:
@@ -161,6 +193,7 @@ class ReferenceWorkflowService:
         reference = ReferenceAsset.create(project_id, name or source_path.stem, reference_type)
         copied_path = self.asset_store.import_reference(source_path, reference.id)
         reference.local_path = str(copied_path)
+        reference.image_metadata = probe_image(copied_path)
         self.repository.save_reference(reference)
         return reference
 
@@ -172,6 +205,8 @@ class ReferenceWorkflowService:
             image_paths=image_paths,
         )
         reference.ai_analysis = ReferenceAnalysis.from_dict(result.output_json)
+        if reference.image_metadata.dominant_colors:
+            reference.ai_analysis.colors = reference.image_metadata.dominant_colors
         reference.type = reference.ai_analysis.suggested_mode
         self.repository.save_reference(reference)
         return reference
@@ -251,6 +286,7 @@ class ResultReviewWorkflowService:
         )
         copied_path = self.asset_store.import_result(source_path, result.id)
         result.local_path = str(copied_path)
+        result.image_metadata = probe_image(copied_path)
         self.repository.save_result_image(result)
         return result
 
@@ -260,6 +296,7 @@ class ResultReviewWorkflowService:
             {
                 "prompt": result_image.prompt_snapshot,
                 "parameters": result_image.parameters_snapshot,
+                "image_metadata": asdict(result_image.image_metadata),
             },
             image_paths=[Path(result_image.local_path)],
         )
@@ -328,3 +365,8 @@ def _parameters_from_llm(data: Any) -> PromptParameters:
     if not isinstance(data, dict):
         return PromptParameters()
     return PromptParameters.from_dict(data)
+
+
+def _split_terms(value: str) -> list[str]:
+    normalized = value.replace("、", ",").replace("\uFF0C", ",")
+    return [term.strip() for term in normalized.split(",") if term.strip()]

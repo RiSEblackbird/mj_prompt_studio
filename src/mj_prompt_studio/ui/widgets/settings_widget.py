@@ -51,6 +51,14 @@ class SettingsWidget(QWidget):
     def _save_settings(self) -> None:
         storage_mode = "privacy" if self.privacy_checkbox.isChecked() else "normal"
         self.context.repository.set_setting("response_storage", storage_mode)
+        self.context.set_response_storage(storage_mode)
+        api_key = self.api_key_edit.text().strip()
+        if api_key:
+            stored = self.context.secret_store.write_openai_api_key(api_key)
+            self.context.set_session_api_key(api_key)
+            if not stored:
+                self.connection_label.setText("設定を保存しました。APIキーはセッションのみ有効です")
+                return
         self.connection_label.setText("設定を保存しました")
 
     def _connection_test(self) -> None:

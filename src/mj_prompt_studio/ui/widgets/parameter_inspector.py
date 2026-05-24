@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -17,18 +18,28 @@ from mj_prompt_studio.domain.ruleset import GenerationRuleset, ParameterSpec
 
 
 class ParameterInspector(QWidget):
+    advice_requested = Signal(str)
+
     def __init__(self, ruleset: GenerationRuleset) -> None:
         super().__init__()
         self.ruleset = ruleset
         self.editors: dict[str, QWidget] = {}
+        self.objective_edit = QLineEdit()
+        self.objective_edit.setPlaceholderText("目的: 精密に狙う / 作風探索 / 文字を入れたい")
+        self.advice_button = QPushButton("AIで目的別提案")
         self.apply_button = QPushButton("Parameter Rulesを適用")
         form_group = QGroupBox("Parameter Advisor")
         self.form_layout = QFormLayout(form_group)
         layout = QVBoxLayout(self)
+        layout.addWidget(self.objective_edit)
+        layout.addWidget(self.advice_button)
         layout.addWidget(form_group)
         layout.addWidget(self.apply_button)
         layout.addStretch(1)
         self._build()
+        self.advice_button.clicked.connect(
+            lambda: self.advice_requested.emit(self.objective_edit.text().strip())
+        )
 
     def _build(self) -> None:
         for spec in self.ruleset.visible_parameters():

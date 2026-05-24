@@ -24,6 +24,9 @@ def test_main_window_can_be_constructed_with_mock_context(tmp_path):
     window = MainWindow(context)
 
     assert window.windowTitle() == "MJ Prompt Studio"
+    assert window.undo_action.isEnabled() is False
+    assert window.redo_action.isEnabled() is False
+    assert window.parameter_inspector.advice_button.text() == "AIで目的別提案"
     window.close()
     context.shutdown()
     app.quit()

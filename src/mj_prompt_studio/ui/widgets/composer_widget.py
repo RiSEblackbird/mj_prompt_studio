@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from functools import partial
+
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import (
     QGridLayout,
     QGroupBox,
@@ -37,6 +39,8 @@ class ComposerWidget(QWidget):
     brief_requested = Signal(str)
     compile_requested = Signal()
     vocabulary_requested = Signal(str)
+    field_assist_requested = Signal(str, str, str)
+    auto_suggestion_requested = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -47,6 +51,11 @@ class ComposerWidget(QWidget):
         self.compile_button = QPushButton("Compile")
         self.copy_button = QPushButton("コピー")
         self.block_edits: dict[str, QLineEdit] = {}
+        self._loading = False
+        self._pending_auto_text = ""
+        self.auto_timer = QTimer(self)
+        self.auto_timer.setSingleShot(True)
+        self.auto_timer.setInterval(1000)
         self.preview = QPlainTextEdit()
         self.preview.setReadOnly(True)
         self.compiled_prompt = QPlainTextEdit()
@@ -58,6 +67,7 @@ class ComposerWidget(QWidget):
             lambda: self.brief_requested.emit(self.brief_text())
         )
         self.compile_button.clicked.connect(self.compile_requested.emit)
+        self.auto_timer.timeout.connect(self._emit_auto_suggestion)
 
     def _build_layout(self) -> None:
         layout = QVBoxLayout(self)
@@ -70,15 +80,26 @@ class ComposerWidget(QWidget):
         blocks_grid = QGridLayout(blocks_group)
         for row, (field_name, label) in enumerate(BLOCK_LABELS):
             edit = QLineEdit()
-            edit.textChanged.connect(self._update_preview_from_blocks)
-            ai_button = QPushButton("AI補完")
-            ai_button.clicked.connect(
-                lambda _checked=False, editor=edit: self.vocabulary_requested.emit(editor.text())
-            )
+            edit.textChanged.connect(partial(self._handle_block_changed, field_name))
+            assist_row = QHBoxLayout()
+            for mode in ["AI補完", "候補", "専門語化", "短縮", "説明"]:
+                ai_button = QPushButton(mode)
+                ai_button.setToolTip(f"{label}を{mode}します")
+                ai_button.clicked.connect(
+                    lambda _checked=False,
+                    selected_mode=mode,
+                    selected_field=field_name,
+                    editor=edit: self._request_field_assist(
+                        selected_mode, selected_field, editor
+                    )
+                )
+                assist_row.addWidget(ai_button)
+            assist_widget = QWidget()
+            assist_widget.setLayout(assist_row)
             self.block_edits[field_name] = edit
             blocks_grid.addWidget(QLabel(label), row, 0)
             blocks_grid.addWidget(edit, row, 1)
-            blocks_grid.addWidget(ai_button, row, 2)
+            blocks_grid.addWidget(assist_widget, row, 2)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(blocks_group)
@@ -100,15 +121,19 @@ class ComposerWidget(QWidget):
         return self.brief_edit.toPlainText().strip()
 
     def update_document(self, document: PromptDocument) -> None:
-        self.brief_edit.setPlainText(document.user_brief)
-        for field_name, edit in self.block_edits.items():
-            value = getattr(document.blocks, field_name)
-            if isinstance(value, list):
-                edit.setText(", ".join(value))
-            else:
-                edit.setText(str(value))
-        self.preview.setPlainText(self._preview_text())
-        self.compiled_prompt.setPlainText(document.compiled_prompt)
+        self._loading = True
+        try:
+            self.brief_edit.setPlainText(document.user_brief)
+            for field_name, edit in self.block_edits.items():
+                value = getattr(document.blocks, field_name)
+                if isinstance(value, list):
+                    edit.setText(", ".join(value))
+                else:
+                    edit.setText(str(value))
+            self.preview.setPlainText(self._preview_text())
+            self.compiled_prompt.setPlainText(document.compiled_prompt)
+        finally:
+            self._loading = False
 
     def read_blocks(self) -> PromptBlocks:
         data: dict[str, object] = {}
@@ -126,6 +151,23 @@ class ComposerWidget(QWidget):
 
     def _update_preview_from_blocks(self) -> None:
         self.preview.setPlainText(self._preview_text())
+
+    def _handle_block_changed(self, field_name: str, text: str) -> None:
+        self._update_preview_from_blocks()
+        if self._loading or len(text.strip()) < 5:
+            return
+        self._pending_auto_text = f"{field_name}: {text.strip()}"
+        self.auto_timer.start()
+
+    def _emit_auto_suggestion(self) -> None:
+        if self._pending_auto_text:
+            self.auto_suggestion_requested.emit(self._pending_auto_text)
+
+    def _request_field_assist(self, mode: str, field_name: str, edit: QLineEdit) -> None:
+        text = edit.text().strip()
+        self.field_assist_requested.emit(mode, field_name, text)
+        if mode in {"AI補完", "専門語化"}:
+            self.vocabulary_requested.emit(text)
 
     def _preview_text(self) -> str:
         blocks = self.read_blocks()

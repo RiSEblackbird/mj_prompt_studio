@@ -53,6 +53,21 @@ class AppContext:
     def set_session_api_key(self, api_key: str | None) -> None:
         effective_settings = replace(self.settings, llm_mode="real") if api_key else self.settings
         self.orchestrator = LLMOrchestrator(effective_settings, api_key or None)
+        self.settings = effective_settings
+        self.prompt_service = PromptWorkflowService(
+            self.repository, self.ruleset, self.orchestrator
+        )
+        self.reference_service = ReferenceWorkflowService(
+            self.repository, self.asset_store, self.orchestrator
+        )
+        self.matrix_service = MatrixWorkflowService(self.repository, self.orchestrator)
+        self.result_review_service = ResultReviewWorkflowService(
+            self.repository, self.asset_store, self.orchestrator
+        )
+
+    def set_response_storage(self, response_storage: str) -> None:
+        self.settings = replace(self.settings, response_storage=response_storage)
+        self.orchestrator = LLMOrchestrator(self.settings, self.orchestrator.api_key)
         self.prompt_service = PromptWorkflowService(
             self.repository, self.ruleset, self.orchestrator
         )

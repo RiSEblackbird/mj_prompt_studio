@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mj_prompt_studio.domain.reference import ResultReview
+from mj_prompt_studio.domain.reference import ResultImage, ResultReview
 
 
 class ResultReviewWidget(QWidget):
@@ -21,10 +22,21 @@ class ResultReviewWidget(QWidget):
     audit_requested = Signal()
     compare_requested = Signal()
     next_prompt_requested = Signal(str)
+    result_selected = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
         self.image_list = QListWidget()
+        self.result_image_ids: list[str] = []
+        self.preview = QLabel("画像プレビュー")
+        self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview.setMinimumHeight(280)
+        self.source_prompt = QPlainTextEdit()
+        self.source_prompt.setReadOnly(True)
+        self.source_prompt.setPlaceholderText("Source prompt")
+        self.parameters_snapshot = QPlainTextEdit()
+        self.parameters_snapshot.setReadOnly(True)
+        self.parameters_snapshot.setPlaceholderText("Parameters snapshot")
         self.summary = QPlainTextEdit()
         self.summary.setReadOnly(True)
         self.import_button = QPushButton("画像を取り込む")
@@ -45,6 +57,15 @@ class ResultReviewWidget(QWidget):
         row.addStretch(1)
         body = QHBoxLayout()
         body.addWidget(self.image_list, 1)
+        preview_layout = QVBoxLayout()
+        preview_layout.addWidget(self.preview)
+        preview_layout.addWidget(QLabel("Source Prompt"))
+        preview_layout.addWidget(self.source_prompt, 1)
+        preview_layout.addWidget(QLabel("Parameters Snapshot"))
+        preview_layout.addWidget(self.parameters_snapshot, 1)
+        preview_panel = QWidget()
+        preview_panel.setLayout(preview_layout)
+        body.addWidget(preview_panel, 2)
         body.addWidget(self.summary, 2)
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Result Review"))
@@ -55,13 +76,39 @@ class ResultReviewWidget(QWidget):
         self.compare_button.clicked.connect(self.compare_requested.emit)
         self.next_prompt_button.clicked.connect(self._request_next_prompt)
         self.audit_button.clicked.connect(self.audit_requested.emit)
+        self.image_list.currentRowChanged.connect(self._emit_selected_image)
 
     def add_result_image(self, label: str) -> None:
         self.image_list.addItem(label)
 
-    def set_result_images(self, labels: list[str]) -> None:
+    def set_result_images(self, images: list[ResultImage]) -> None:
         self.image_list.clear()
-        self.image_list.addItems(labels)
+        self.result_image_ids = []
+        for image in images:
+            label = (
+                f"{image.local_path.rsplit('/', 1)[-1]} | "
+                f"{image.image_metadata.width}x{image.image_metadata.height}"
+            )
+            self.result_image_ids.append(image.id)
+            self.image_list.addItem(label)
+        if images:
+            self.set_current_image(images[0])
+
+    def set_current_image(self, image: ResultImage) -> None:
+        pixmap = QPixmap(image.local_path)
+        if pixmap.isNull():
+            self.preview.setText("画像プレビューを表示できません")
+        else:
+            self.preview.setPixmap(
+                pixmap.scaled(
+                    520,
+                    320,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+        self.source_prompt.setPlainText(image.prompt_snapshot)
+        self.parameters_snapshot.setPlainText(str(image.parameters_snapshot))
 
     def set_review(self, review: ResultReview) -> None:
         self.last_review = review
@@ -100,3 +147,7 @@ class ResultReviewWidget(QWidget):
         if not self.last_review or not self.last_review.next_prompt_candidates:
             return
         self.next_prompt_requested.emit(self.last_review.next_prompt_candidates[0])
+
+    def _emit_selected_image(self, row: int) -> None:
+        if 0 <= row < len(self.result_image_ids):
+            self.result_selected.emit(self.result_image_ids[row])

@@ -264,6 +264,31 @@ class SQLiteRepository:
                 (job_id, agent_name, _to_json(payload), utc_now().isoformat()),
             )
 
+    def load_user_vocab_profile(self, profile_id: str = "default") -> dict[str, Any]:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT profile_json FROM user_vocab_profiles WHERE id = ?",
+                (profile_id,),
+            ).fetchone()
+        if row is None:
+            return {}
+        return dict(json.loads(row["profile_json"]))
+
+    def save_user_vocab_profile(
+        self, profile: dict[str, Any], profile_id: str = "default"
+    ) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO user_vocab_profiles (id, profile_json, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    profile_json=excluded.profile_json,
+                    updated_at=excluded.updated_at
+                """,
+                (profile_id, _to_json(profile), utc_now().isoformat()),
+            )
+
     def get_setting(self, key: str, default: Any = None) -> Any:
         with self.connect() as connection:
             row = connection.execute(

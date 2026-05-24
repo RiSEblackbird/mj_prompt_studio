@@ -26,8 +26,10 @@ from PySide6.QtWidgets import (
 )
 
 from mj_prompt_studio.app.app_context import AppContext
+from mj_prompt_studio.app.export_options import build_export_options
+from mj_prompt_studio.application.free_editor_transform import format_free_editor_result
 from mj_prompt_studio.domain.matrix import MatrixPlan
-from mj_prompt_studio.domain.prompt_document import PromptDocument, PromptPatch
+from mj_prompt_studio.domain.prompt_document import PromptDocument, PromptParameters, PromptPatch
 from mj_prompt_studio.domain.reference import ReferenceAsset, ResultImage, ResultReview
 from mj_prompt_studio.infra.sqlite_repository import ProjectRecord
 from mj_prompt_studio.ui.strings import APP_TITLE
@@ -59,6 +61,9 @@ class MainWindow(QMainWindow):
         self.last_result_image: ResultImage | None = None
         self.last_review: ResultReview | None = None
         self.matrix_plan: MatrixPlan | None = None
+        self.undo_stack: list[dict[str, Any]] = []
+        self.redo_stack: list[dict[str, Any]] = []
+        self.latest_auto_suggestion_text = ""
         self.bridge = JobBridge()
         self.bridge.completed.connect(self._handle_job_completed)
         self.setWindowTitle(APP_TITLE)
@@ -83,13 +88,20 @@ class MainWindow(QMainWindow):
             ("新規プロジェクト", self._new_project),
             ("開く", self._open_project_dialog),
             ("保存", self._save_current_document),
-            ("エクスポート", self._export_markdown_record_file),
+            ("エクスポート", self._export_file_dialog),
             ("設定", lambda: self.tabs.setCurrentWidget(self.settings_widget)),
         ]
         for label, handler in actions:
             action = QAction(label, self)
             action.triggered.connect(handler)
             toolbar.addAction(action)
+        toolbar.addSeparator()
+        self.undo_action = QAction("Undo", self)
+        self.undo_action.triggered.connect(self._undo_document)
+        self.redo_action = QAction("Redo", self)
+        self.redo_action.triggered.connect(self._redo_document)
+        toolbar.addAction(self.undo_action)
+        toolbar.addAction(self.redo_action)
         toolbar.addSeparator()
         toolbar.addWidget(QLabel("● AI接続中"))
 
@@ -136,9 +148,12 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.settings_widget, "Settings")
         self.setCentralWidget(self.tabs)
         self.composer_widget.brief_requested.connect(self._run_ai_brief)
-        self.composer_widget.compile_requested.connect(self._compile_current_document)
+        self.composer_widget.compile_requested.connect(self._compile_with_agent)
         self.composer_widget.vocabulary_requested.connect(self._run_vocabulary)
+        self.composer_widget.field_assist_requested.connect(self._run_field_assist)
+        self.composer_widget.auto_suggestion_requested.connect(self._run_auto_suggestion)
         self.composer_widget.copy_button.clicked.connect(self._copy_prompt)
+        self.free_editor_widget.transform_requested.connect(self._run_free_editor_transform)
         self.matrix_widget.plan_requested.connect(self._run_matrix_plan)
         self.matrix_widget.generate_requested.connect(self._generate_matrix_variants)
         self.matrix_widget.copy_selected_requested.connect(self._copy_selected_matrix_variant)
@@ -155,6 +170,7 @@ class MainWindow(QMainWindow):
         self.result_widget.compare_requested.connect(self._compare_results)
         self.result_widget.next_prompt_requested.connect(self._send_next_prompt_to_composer)
         self.result_widget.audit_requested.connect(self._run_final_audit)
+        self.result_widget.result_selected.connect(self._select_result_image)
 
     def _build_right_dock(self) -> None:
         dock = QDockWidget("AI Inspector", self)
@@ -169,6 +185,7 @@ class MainWindow(QMainWindow):
         dock.setWidget(splitter)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         self.parameter_inspector.apply_button.clicked.connect(self._apply_parameters_from_inspector)
+        self.parameter_inspector.advice_requested.connect(self._run_parameter_advisor)
         self.prompt_doctor_panel.run_button.clicked.connect(self._run_prompt_doctor)
         self.prompt_doctor_panel.apply_patch_requested.connect(self._apply_selected_patch)
 
@@ -193,6 +210,7 @@ class MainWindow(QMainWindow):
         self._refresh_history()
         self._refresh_references()
         self._refresh_results()
+        self._refresh_undo_actions()
 
     def _refresh_project_tree(self) -> None:
         self.project_tree.clear()
@@ -222,16 +240,47 @@ class MainWindow(QMainWindow):
     def _refresh_results(self) -> None:
         images = self.context.repository.list_result_images(self.project.id, self.document.id)
         self.result_images = {image.id: image for image in images}
-        labels = [
-            f"{Path(image.local_path).name} | {image.created_at.isoformat()}" for image in images
-        ]
-        self.result_widget.set_result_images(labels)
+        self.result_widget.set_result_images(images)
+        if self.last_result_image is None and images:
+            self.last_result_image = images[0]
+        if self.last_result_image and self.last_result_image.id in self.result_images:
+            self.result_widget.set_current_image(self.result_images[self.last_result_image.id])
+
+    def _push_undo(self) -> None:
+        self.undo_stack.append(self.document.to_dict())
+        self.undo_stack = self.undo_stack[-30:]
+        self.redo_stack.clear()
+        self._refresh_undo_actions()
+
+    def _undo_document(self) -> None:
+        if not self.undo_stack:
+            return
+        self.redo_stack.append(self.document.to_dict())
+        self.document = PromptDocument.from_dict(self.undo_stack.pop())
+        self.context.repository.save_prompt_document(self.document)
+        self.context.repository.save_prompt_revision(self.document, "undo", "Undoを実行")
+        self._refresh_all()
+
+    def _redo_document(self) -> None:
+        if not self.redo_stack:
+            return
+        self.undo_stack.append(self.document.to_dict())
+        self.document = PromptDocument.from_dict(self.redo_stack.pop())
+        self.context.repository.save_prompt_document(self.document)
+        self.context.repository.save_prompt_revision(self.document, "redo", "Redoを実行")
+        self._refresh_all()
+
+    def _refresh_undo_actions(self) -> None:
+        self.undo_action.setEnabled(bool(self.undo_stack))
+        self.redo_action.setEnabled(bool(self.redo_stack))
 
     def _new_project(self) -> None:
         name, ok = QInputDialog.getText(self, APP_TITLE, "プロジェクト名")
         if not ok:
             return
         project_name = name.strip() or "New Prompt Project"
+        self.undo_stack.clear()
+        self.redo_stack.clear()
         self.project, self.document = self.context.prompt_service.create_project_with_document(
             project_name, "Untitled Prompt"
         )
@@ -261,9 +310,12 @@ class MainWindow(QMainWindow):
             document = documents[0]
         self.project = project
         self.document = document
+        self.undo_stack.clear()
+        self.redo_stack.clear()
         self._refresh_all()
 
     def _save_current_document(self) -> None:
+        self._push_undo()
         self.document.blocks = self.composer_widget.read_blocks()
         self.document.parameters = self.parameter_inspector.read_parameters()
         self.context.prompt_service.compile_document(
@@ -272,6 +324,7 @@ class MainWindow(QMainWindow):
         self._refresh_all()
 
     def _compile_current_document(self) -> None:
+        self._push_undo()
         self.document.blocks = self.composer_widget.read_blocks()
         self.document.parameters = self.parameter_inspector.read_parameters()
         self.context.prompt_service.compile_document(
@@ -279,14 +332,32 @@ class MainWindow(QMainWindow):
         )
         self._refresh_all()
 
-    def _apply_parameters_from_inspector(self) -> None:
-        self.document.parameters = self.parameter_inspector.read_parameters()
+    def _compile_with_agent(self) -> None:
         self._compile_current_document()
+
+        def work() -> dict[str, Any]:
+            return self.context.prompt_service.request_compile_review(self.document).output_json
+
+        self.context.submit_agent_job(
+            "PromptCompilerAgent",
+            {"document_id": self.document.id},
+            work,
+            callback=lambda job: self.bridge.completed.emit(job.agent_name, job.output_json or {}),
+        )
+
+    def _apply_parameters_from_inspector(self) -> None:
+        self._push_undo()
+        self.document.parameters = self.parameter_inspector.read_parameters()
+        self.context.prompt_service.compile_document(
+            self.document, source="manual", diff_summary="Parameter Rulesを適用"
+        )
+        self._refresh_all()
 
     def _run_ai_brief(self, brief: str) -> None:
         if not brief:
             QMessageBox.information(self, APP_TITLE, "AI Briefに入力してください。")
             return
+        self._push_undo()
 
         def work() -> dict[str, Any]:
             document, result = self.context.prompt_service.build_from_brief(self.document, brief)
@@ -309,6 +380,81 @@ class MainWindow(QMainWindow):
         self.context.submit_agent_job(
             "VocabularyAgent",
             {"text": text},
+            work,
+            callback=lambda job: self.bridge.completed.emit(job.agent_name, job.output_json or {}),
+        )
+
+    def _run_field_assist(self, mode: str, field_name: str, text: str) -> None:
+        prompt_text = text or f"{field_name}の候補を生成"
+
+        def work() -> dict[str, Any]:
+            payload = self.context.prompt_service.request_vocabulary(
+                f"{mode}: {prompt_text}"
+            ).output_json
+            patches = payload.get("patches", [])
+            if isinstance(patches, list):
+                for patch in patches:
+                    if isinstance(patch, dict):
+                        patch["field_path"] = f"blocks.{field_name}"
+                        patch["old_value"] = text
+                        patch["reason"] = f"{mode}: {patch.get('reason', '')}".strip()
+            return {"target": "composer_field", "field_name": field_name, **payload}
+
+        self.context.submit_agent_job(
+            "VocabularyAgent",
+            {"mode": mode, "field_name": field_name},
+            work,
+            callback=lambda job: self.bridge.completed.emit(job.agent_name, job.output_json or {}),
+        )
+
+    def _run_auto_suggestion(self, text: str) -> None:
+        self.latest_auto_suggestion_text = text
+
+        def work() -> dict[str, Any]:
+            payload = self.context.prompt_service.request_vocabulary(text).output_json
+            return {"target": "auto_suggestion", "source_text": text, **payload}
+
+        self.context.submit_agent_job(
+            "VocabularyAgent",
+            {"source_text": text, "mode": "auto"},
+            work,
+            callback=lambda job: self.bridge.completed.emit(job.agent_name, job.output_json or {}),
+        )
+
+    def _run_free_editor_transform(self, mode: str, source: str, prompt: str) -> None:
+        source_text = source or prompt
+        if not source_text:
+            QMessageBox.information(self, APP_TITLE, "変換するテキストを入力してください。")
+            return
+
+        def work() -> dict[str, Any]:
+            payload = self.context.prompt_service.request_vocabulary(
+                f"{mode}: {source_text}"
+            ).output_json
+            transformed = format_free_editor_result(mode, source_text, prompt, payload)
+            return {
+                "target": "free_editor",
+                "mode": mode,
+                "transformed": transformed,
+                "detail": str(payload.get("suggestions", [])),
+            }
+
+        self.context.submit_agent_job(
+            "VocabularyAgent",
+            {"mode": mode, "source": "<redacted>"},
+            work,
+            callback=lambda job: self.bridge.completed.emit(job.agent_name, job.output_json or {}),
+        )
+
+    def _run_parameter_advisor(self, objective: str) -> None:
+        target = objective or self.document.user_brief or self.document.compiled_prompt
+
+        def work() -> dict[str, Any]:
+            return self.context.prompt_service.request_parameter_advice(target).output_json
+
+        self.context.submit_agent_job(
+            "ParameterAdvisorAgent",
+            {"objective": objective or "current prompt"},
             work,
             callback=lambda job: self.bridge.completed.emit(job.agent_name, job.output_json or {}),
         )
@@ -470,12 +616,30 @@ class MainWindow(QMainWindow):
         if agent_name == "IntentIntakeAgent":
             self.document = PromptDocument.from_dict(payload["document"])
             self.composer_widget.set_suggestions(payload.get("agent", {}))
+        elif agent_name == "PromptCompilerAgent":
+            self.composer_widget.set_suggestions(payload)
+            self.ai_inspector.update_agent_result(payload)
         elif agent_name == "VocabularyAgent":
+            if payload.get("target") == "free_editor":
+                self.free_editor_widget.set_transform_result(
+                    str(payload.get("transformed", "")),
+                    str(payload.get("detail", "")),
+                )
+                self.jobs_panel.refresh()
+                return
+            if payload.get("target") == "auto_suggestion":
+                if payload.get("source_text") != self.latest_auto_suggestion_text:
+                    self.jobs_panel.refresh()
+                    return
+                self.ai_inspector.update_agent_result(payload)
             self.composer_widget.set_suggestions(payload)
             patches = payload.get("patches")
             if isinstance(patches, list) and patches:
                 self.pending_patches = [PromptPatch.from_dict(patch) for patch in patches]
                 self.prompt_doctor_panel.set_agent_result(payload)
+        elif agent_name == "ParameterAdvisorAgent":
+            self.ai_inspector.update_agent_result(payload)
+            self._confirm_and_apply_parameters(payload)
         elif agent_name == "PromptDoctorAgent":
             patches = payload.get("patches")
             if isinstance(patches, list):
@@ -517,7 +681,35 @@ class MainWindow(QMainWindow):
         answer = QMessageBox.question(self, APP_TITLE, message)
         if answer != QMessageBox.StandardButton.Yes:
             return
+        self._push_undo()
         self.document = self.context.prompt_service.apply_patch(self.document, patch)
+        self._refresh_all()
+
+    def _confirm_and_apply_parameters(self, payload: dict[str, Any]) -> None:
+        parameters = payload.get("parameters", {})
+        if not isinstance(parameters, dict):
+            return
+        message = "\n".join(
+            [
+                f"Profile: {payload.get('profile_name', 'Parameter Advice')}",
+                "",
+                "提案されたParameter Rulesを適用しますか?",
+                str(parameters),
+                "",
+                "Rationale:",
+                *[f"- {item}" for item in payload.get("rationale", [])],
+            ]
+        )
+        answer = QMessageBox.question(self, APP_TITLE, message)
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self._push_undo()
+        merged = self.document.parameters.iter_values()
+        merged.update(parameters)
+        self.document.parameters = PromptParameters.from_dict(merged)
+        self.context.prompt_service.compile_document(
+            self.document, source="ai_parameter_advice", diff_summary="Parameter Advisor提案を適用"
+        )
         self._refresh_all()
 
     def _compare_results(self) -> None:
@@ -533,6 +725,13 @@ class MainWindow(QMainWindow):
             lines.append(f"- {review.result_image_id}: commercial usability {score}")
             lines.append(f"  {review.ai_summary}")
         self.result_widget.set_comparison(lines)
+
+    def _select_result_image(self, result_image_id: str) -> None:
+        image = self.result_images.get(result_image_id)
+        if image is None:
+            return
+        self.last_result_image = image
+        self.result_widget.set_current_image(image)
 
     def _send_next_prompt_to_composer(self, candidate: str) -> None:
         patch = PromptPatch(
@@ -558,22 +757,30 @@ class MainWindow(QMainWindow):
         QApplication.clipboard().setText(prompts)
         self.statusBar().showMessage("Matrix variantsを一括コピーしました")
 
-    def _export_markdown_record_file(self) -> None:
+    def _export_file_dialog(self) -> None:
+        options = build_export_options(
+            document=self.document,
+            ruleset=self.context.ruleset,
+            export_service=self.context.export_service,
+            matrix_service=self.context.matrix_service,
+            matrix_plan=self.matrix_plan,
+            matrix_variants=self.matrix_widget.variants,
+        )
+        modes = [option.label for option in options]
+        mode, ok = QInputDialog.getItem(self, APP_TITLE, "Export mode", modes, 0, False)
+        if not ok:
+            return
+        selected = options[modes.index(mode)]
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Markdown recordを保存",
-            f"{self.document.title}.md",
-            "Markdown (*.md)",
+            "エクスポートを保存",
+            selected.default_path,
+            selected.file_filter,
         )
         if not path:
             return
-        self.context.export_to_file(
-            Path(path),
-            lambda: self.context.export_service.markdown_record(
-                self.document, self.context.ruleset
-            ),
-        )
-        self.statusBar().showMessage(f"Markdown recordを保存しました: {path}")
+        self.context.export_to_file(Path(path), selected.content_factory)
+        self.statusBar().showMessage(f"エクスポートを保存しました: {path}")
 
     def _cancel_job(self, job_id: str) -> None:
         if not self.context.job_queue.cancel(job_id):

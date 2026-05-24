@@ -24,6 +24,7 @@
 - Composer、Reference、Matrix、Result Reviewなどのユースケースを束ねる。
 - LLM出力をPatchまたはReviewとして受け取り、検証後にDomainへ適用する。
 - RepositoryとAssetStoreを通じて保存する。
+- Free Editor変換整形やExport option構築など、UIから切り出せる操作ポリシーを保持する。
 
 依存:
 
@@ -35,6 +36,7 @@
 責務:
 
 - `PromptDocument`、`PromptBlocks`、`PromptParameters`、`Ruleset`、`ValidationReport`。
+- `ReferenceAsset` / `ResultImage` はローカル画像メタデータとAI分析結果を分けて保持する。
 - Prompt Compiler、Validator、Matrix Generator。
 - LLMやSQLiteに依存しない決定論的処理。
 
@@ -48,7 +50,8 @@
 責務:
 
 - SQLite Repository、Asset Store、Settings、Secret Store。
-- ローカルDB、画像コピー、環境変数/資格情報境界。
+- ローカルDB、画像コピー、画像メタデータ抽出、環境変数/資格情報境界。
+- APIキーは環境変数を優先し、利用可能な場合だけOS資格情報ストアへ保存する。
 
 制約:
 

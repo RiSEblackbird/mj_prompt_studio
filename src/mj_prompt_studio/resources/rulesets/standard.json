@@ -1,0 +1,135 @@
+{
+  "ruleset_id": "internal_default",
+  "display_name": "Standard Ruleset",
+  "ui_expose_identifier": false,
+  "capabilities": {
+    "image_prompt": true,
+    "style_reference": true,
+    "moodboard": true,
+    "personalization": true,
+    "negative_parameter": true,
+    "quality_parameter": true,
+    "multi_prompt_weighting": true,
+    "text_in_image": true
+  },
+  "parameters": [
+    {
+      "name": "aspect_ratio",
+      "display_name": "Aspect Ratio",
+      "kind": "string",
+      "flag": "--ar",
+      "description": "出力の縦横比。"
+    },
+    {
+      "name": "raw",
+      "display_name": "Raw",
+      "kind": "boolean",
+      "flag": "--raw",
+      "description": "スタイルの過剰な付与を抑える。"
+    },
+    {
+      "name": "stylize",
+      "display_name": "Stylize",
+      "kind": "integer",
+      "flag": "--s",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "スタイルの強さ。"
+    },
+    {
+      "name": "chaos",
+      "display_name": "Variety",
+      "kind": "integer",
+      "flag": "--c",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "多様性の強さ。"
+    },
+    {
+      "name": "weird",
+      "display_name": "Weird",
+      "kind": "integer",
+      "flag": "--weird",
+      "minimum": 0,
+      "maximum": 3000,
+      "description": "非典型的な表現の強さ。"
+    },
+    {
+      "name": "experimental",
+      "display_name": "Experimental",
+      "kind": "integer",
+      "flag": "--exp",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "実験性の強さ。"
+    },
+    {
+      "name": "tile",
+      "display_name": "Tile",
+      "kind": "boolean",
+      "flag": "--tile",
+      "description": "繰り返しパターン向け。"
+    },
+    {
+      "name": "seed",
+      "display_name": "Seed",
+      "kind": "integer",
+      "flag": "--seed",
+      "minimum": 0,
+      "maximum": 4294967295,
+      "description": "再現性のための固定値。"
+    },
+    {
+      "name": "speed_mode",
+      "display_name": "Speed Mode",
+      "kind": "enum",
+      "flag": "--speed",
+      "choices": ["relaxed", "balanced", "fast"],
+      "description": "手動投入時の処理速度の目安。"
+    }
+  ],
+  "reference_modes": [
+    {
+      "name": "image_reference",
+      "display_name": "Image Reference",
+      "enabled": true,
+      "description": "被写体や構図の参考。"
+    },
+    {
+      "name": "style_reference",
+      "display_name": "Style Reference",
+      "enabled": true,
+      "description": "表現や質感の参考。"
+    },
+    {
+      "name": "moodboard",
+      "display_name": "Moodboard",
+      "enabled": true,
+      "description": "複数素材から方向性をまとめる。"
+    },
+    {
+      "name": "personalization_profile",
+      "display_name": "Personalization Profile",
+      "enabled": true,
+      "description": "好みや制作傾向の補助。"
+    }
+  ],
+  "compatibility_rules": [
+    {
+      "rule_id": "positive_constraints_preferred",
+      "severity": "info",
+      "message": "否定指定よりも肯定制約の利用を優先してください。"
+    }
+  ],
+  "output_order": [
+    "aspect_ratio",
+    "raw",
+    "stylize",
+    "chaos",
+    "weird",
+    "experimental",
+    "tile",
+    "seed",
+    "speed_mode"
+  ]
+}

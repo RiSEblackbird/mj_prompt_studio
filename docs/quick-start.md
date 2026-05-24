@@ -1,49 +1,60 @@
-# Quick Start
+# Quick Start for Users
 
-## 1. インストール
+MJ Prompt Studioを初めて開いたら、まずは次の流れで試してください。詳しい説明は[ユーザーマニュアル](user-manual.md)にあります。
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-```
+## 1. AI接続を確認する
 
-## 2. 起動
+1. `Settings`を開く。
+2. APIキーを使う場合は`APIキー`欄に入力する。
+3. `APIキーをこのセッションに適用`を押す。
+4. `接続テスト`を押し、接続状態を確認する。
 
-```bash
-make run
-```
+APIキーがない場合でも、サンプル応答で画面の流れを試せます。
 
-## 3. APIキーなしで試す
+## 2. 最初のプロンプトを作る
 
-既定では `MJPS_LLM_MODE=mock` と同等に動作する。AI Brief、Prompt Doctor、Reference Analysis、Matrix Planning、Result Reviewはモック応答で確認できる。
+1. `Composer`を開く。
+2. `AI Brief`に、作りたい画像を日本語で短く書く。
+3. `AIで構成案を作る`を押す。
+4. 生成された各Blockを確認し、必要な行を直す。
+5. `Compile`を押す。
+6. `Compiled Prompt`を確認し、`コピー`を押す。
 
-## 4. 実APIを使う
+## 3. 画像生成サービスへ手動で投入する
 
-```bash
-export OPENAI_API_KEY="..."
-export MJPS_LLM_MODE=real
-make run
-```
+1. コピーしたプロンプトを画像生成サービスへ自分で貼り付ける。
+2. 画像を生成する。
+3. 良い候補や気になる候補をローカルに保存する。
 
-起動後にSettingsタブでセッション内APIキーを入力して接続テストすることもできます。保存時は利用可能なOS資格情報ストアを使い、使えない場合はセッション内適用に限定します。
+このアプリは生成サービスへの自動投稿や自動操作を行いません。
 
-## 5. 基本フロー
+## 4. 結果を見直す
 
-1. Composerで日本語Briefを入力する。
-2. `AIで構成案を作る` を押す。
-3. Prompt Blocksを編集する。
-4. 各入力欄の `AI補完`、`候補`、`専門語化`、`短縮`、`説明` を必要に応じて使う。適用前にPatch差分を確認する。
-5. `Compile` でCompiled Promptを生成する。Prompt Compiler AgentのレビューはJobとして実行される。
-6. 必要ならParameter Advisorで目的別提案を作り、確認後に適用する。
-7. 生成サービスへ手動コピーする。
-8. 参照画像をReference Libraryへ取り込み、プレビュー、メタデータ、AI分析、抽出語彙を確認する。
-9. 結果画像をResult Reviewへ手動取り込みする。
-10. AI ReviewとNext Prompt Candidatesを確認する。
-11. 改善候補はComposerへPatchとして戻し、差分確認後に適用する。
+1. `Result Review`を開く。
+2. `画像を取り込む`で保存した画像を選ぶ。
+3. `AIレビュー`を押す。
+4. スコア、良い点、課題、次のプロンプト候補を確認する。
+5. 改善候補を使う場合は`次プロンプト作成`を押し、Composerで差分を確認して適用する。
 
-## 6. エクスポートと配布物
+## 5. 参考画像を使う
 
-- ToolbarのExportからPrompt only、Markdown record、JSON snapshot、CSV/Markdown matrix variantsを保存できます。
-- 配布用のPythonパッケージは `make package` で `dist/` に作成できます。
-- 作業中の変更はToolbarのUndo/Redoで戻せます。
+1. `Reference Library`を開く。
+2. `参照画像を追加`で画像を取り込む。
+3. `AI分析`を押す。
+4. 抽出された語彙を確認する。
+5. `語彙を使う`でComposerへ反映する。
+
+## 6. 複数案を試す
+
+1. `Matrix Lab`を開く。
+2. 何を比較したいかを書く。
+3. 実験計画を作る。
+4. Variantを生成する。
+5. 必要な案をコピーして生成サービスで試す。
+
+## 7. 困ったとき
+
+- 変更を戻したい: Toolbarの`Undo`を押す。
+- AI処理が止まった: 下部の`Jobs`で状態を確認し、必要ならキャンセルまたは再実行する。
+- プロンプトが長い: 各Blockの`短縮`、または`Free Editor`の`短縮`を使う。
+- どこを直せばよいかわからない: 右側の`Prompt Doctor`で改善案を確認する。

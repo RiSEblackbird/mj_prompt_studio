@@ -21,7 +21,7 @@ class SettingsWidget(QWidget):
         self.connection_label = QLabel("未確認")
         self.api_key_edit = QLineEdit()
         self.api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
-        self.api_key_edit.setPlaceholderText("このセッションで使うAPIキー")
+        self.api_key_edit.setPlaceholderText("環境変数OPENAI_API_KEYがあれば起動時に自動使用")
         self.privacy_checkbox = QCheckBox("Privacy mode")
         self.privacy_checkbox.setChecked(context.settings.privacy_mode)
         self.apply_api_key_button = QPushButton("APIキーをこのセッションに適用")
@@ -43,6 +43,8 @@ class SettingsWidget(QWidget):
         self.apply_api_key_button.clicked.connect(self._apply_session_api_key)
         self.save_settings_button.clicked.connect(self._save_settings)
         self.test_button.clicked.connect(self._connection_test)
+        if context.orchestrator.api_key:
+            self.connection_label.setText("環境変数または保存済みキーを検出")
 
     def _apply_session_api_key(self) -> None:
         self.context.set_session_api_key(self.api_key_edit.text().strip() or None)

@@ -15,12 +15,13 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-APIキーがない場合でも、既定ではモックLLMで主要フローを確認できます。実APIを使う場合は環境変数を設定します。
+APIキーがない場合でも、既定ではモックLLMで主要フローを確認できます。端末の環境変数 `OPENAI_API_KEY` にAPIキーがある場合は、起動時に自動で実API利用に切り替わります。
 
 ```bash
 export OPENAI_API_KEY="..."
-export MJPS_LLM_MODE=real
 ```
+
+明示的にサンプル応答で起動したい場合だけ、`MJPS_LLM_MODE=mock` を指定します。
 
 ## 起動
 

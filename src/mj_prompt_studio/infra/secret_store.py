@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
 from typing import Any
+
+from mj_prompt_studio.config import read_openai_api_key_from_environment
 
 SERVICE_NAME = "MJ Prompt Studio"
 ACCOUNT_NAME = "openai_api_key"
@@ -9,7 +10,7 @@ ACCOUNT_NAME = "openai_api_key"
 
 class SecretStore:
     def read_openai_api_key(self) -> str | None:
-        value = os.environ.get("OPENAI_API_KEY")
+        value = read_openai_api_key_from_environment()
         if value:
             return value
         keyring = _load_keyring()

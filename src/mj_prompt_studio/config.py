@@ -6,6 +6,7 @@ from pathlib import Path
 
 APP_NAME = "MJ Prompt Studio"
 ENV_PREFIX = "MJPS_"
+OPENAI_API_KEY_ENV_NAMES = ("OPENAI_API_KEY", "OPENAI_KEY", f"{ENV_PREFIX}OPENAI_API_KEY")
 
 
 @dataclass(frozen=True)
@@ -39,9 +40,10 @@ def default_data_dir() -> Path:
 
 
 def load_runtime_settings() -> RuntimeSettings:
+    configured_llm_mode = os.environ.get(f"{ENV_PREFIX}LLM_MODE")
     return RuntimeSettings(
         data_dir=default_data_dir(),
-        llm_mode=os.environ.get(f"{ENV_PREFIX}LLM_MODE", "mock").lower(),
+        llm_mode=(configured_llm_mode or _default_llm_mode()).lower(),
         response_storage=os.environ.get(f"{ENV_PREFIX}RESPONSE_STORAGE", "normal").lower(),
         model_config=LLMModelConfig(
             default_model=os.environ.get(f"{ENV_PREFIX}MODEL_DEFAULT", "gpt-5.5"),
@@ -53,3 +55,15 @@ def load_runtime_settings() -> RuntimeSettings:
         timeout_seconds=int(os.environ.get(f"{ENV_PREFIX}TIMEOUT_SECONDS", "120")),
         retry_count=int(os.environ.get(f"{ENV_PREFIX}RETRY_COUNT", "2")),
     )
+
+
+def read_openai_api_key_from_environment() -> str | None:
+    for name in OPENAI_API_KEY_ENV_NAMES:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return None
+
+
+def _default_llm_mode() -> str:
+    return "real" if read_openai_api_key_from_environment() else "mock"

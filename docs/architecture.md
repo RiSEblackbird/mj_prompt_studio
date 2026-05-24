@@ -66,5 +66,6 @@
 
 分岐条件:
 
-- `MJPS_LLM_MODE=real` かつAPIキーがある場合のみ実APIを使う。
+- `OPENAI_API_KEY` が端末環境変数にある場合は、起動時の既定を実API利用にする。
+- `MJPS_LLM_MODE=mock` を明示した場合は、APIキーがあってもMockLLMを使う。
 - それ以外はMockLLMで同じschemaの応答を返す。

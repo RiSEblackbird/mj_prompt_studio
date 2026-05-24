@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# MJ Prompt Studio local data
+*.sqlite
+*.sqlite3
+*.db
+assets/
+cache/
+logs/
+exports/
+screenshots/
+api_response_dumps/
+*.mjps
+*.mjpson
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

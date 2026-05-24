@@ -1,0 +1,15 @@
+{
+  "name": "Product Photo",
+  "blocks": {
+    "intent": "premium editorial product photography",
+    "composition": "clean negative space, refined tabletop layout",
+    "lighting": "soft natural window light",
+    "style": "commercially usable, elegant, sharp material detail"
+  },
+  "parameters": {
+    "aspect_ratio": "4:5",
+    "raw": true,
+    "stylize": 80,
+    "chaos": 5
+  }
+}

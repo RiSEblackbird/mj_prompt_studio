@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mj-prompt-studio"
+version = "0.1.0"
+description = "Local desktop prompt design studio for image generation workflows."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "PySide6>=6.7",
+  "openai>=1.99",
+  "pydantic>=2.8",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[project.scripts]
+mj-prompt-studio = "mj_prompt_studio.app.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mj_prompt_studio = [
+  "resources/rulesets/*.json",
+  "resources/templates/*.json",
+  "ui/themes/*.qss",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]
+ignore = ["RUF012"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_unused_configs = true
+mypy_path = "src"
+packages = ["mj_prompt_studio"]
+
+[[tool.mypy.overrides]]
+module = ["PySide6.*", "openai.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

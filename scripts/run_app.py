@@ -1,0 +1,4 @@
+from mj_prompt_studio.app.main import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())

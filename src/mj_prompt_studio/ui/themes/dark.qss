@@ -1,0 +1,66 @@
+QWidget {
+  background: #0c1722;
+  color: #d7e0ea;
+  font-size: 13px;
+}
+QMainWindow, QDockWidget {
+  background: #0b141f;
+}
+QToolBar {
+  background: #08111b;
+  border-bottom: 1px solid #1f3142;
+  spacing: 6px;
+}
+QToolButton, QPushButton {
+  background: #152538;
+  border: 1px solid #2a4156;
+  border-radius: 5px;
+  padding: 6px 10px;
+}
+QToolButton:hover, QPushButton:hover {
+  border-color: #6e7dff;
+}
+QPushButton#PrimaryButton {
+  background: #5b3fbd;
+  border-color: #7d63f2;
+}
+QLineEdit, QPlainTextEdit, QTextEdit, QComboBox, QSpinBox {
+  background: #101d2a;
+  border: 1px solid #2a4156;
+  border-radius: 5px;
+  padding: 5px;
+  selection-background-color: #5147b8;
+}
+QTabWidget::pane {
+  border: 1px solid #223548;
+}
+QTabBar::tab {
+  background: #101d2a;
+  border: 1px solid #223548;
+  padding: 9px 15px;
+}
+QTabBar::tab:selected {
+  background: #1b2450;
+  border-bottom: 2px solid #8a63ff;
+}
+QGroupBox {
+  border: 1px solid #223548;
+  border-radius: 6px;
+  margin-top: 10px;
+  padding: 10px;
+}
+QGroupBox::title {
+  subcontrol-origin: margin;
+  left: 8px;
+  padding: 0 4px;
+}
+QTreeWidget, QListWidget, QTableWidget {
+  background: #101d2a;
+  border: 1px solid #223548;
+  alternate-background-color: #132233;
+}
+QHeaderView::section {
+  background: #132233;
+  border: 1px solid #223548;
+  padding: 4px;
+}

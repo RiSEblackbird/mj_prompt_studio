@@ -39,6 +39,10 @@ make build
 make package
 ```
 
+## CI
+
+GitHub Actionsの `CI` ワークフローで、Pull Requestと主要ブランチへのpush時にlint、型チェック、テスト、ビルド、パッケージ作成、UI文言ポリシー検査を実行します。CIではモックLLMを使うため、OpenAI APIキーは不要です。詳細は [CI](docs/process/ci.md) を参照してください。
+
 ## 主な機能
 
 - Composer: 日本語ブリーフからPromptDocument、Prompt Blocks、Compiled Promptを作成。

@@ -15,12 +15,20 @@ FORBIDDEN_PATTERNS = [
 
 def verify() -> None:
     texts = list(USER_VISIBLE_STRINGS)
-    for root in [Path("src/mj_prompt_studio/ui"), Path("src/mj_prompt_studio/resources")]:
+    for root in [
+        Path("src/mj_prompt_studio/ui"),
+        Path("src/mj_prompt_studio/resources"),
+        Path("docs"),
+        Path("plans"),
+    ]:
         if not root.exists():
             continue
         for path in root.rglob("*"):
-            if path.suffix in {".py", ".qss", ".json"}:
+            if path.suffix in {".md", ".py", ".qss", ".json"}:
                 texts.append(path.read_text(encoding="utf-8"))
+    readme = Path("README.md")
+    if readme.exists():
+        texts.append(readme.read_text(encoding="utf-8"))
     violations = [
         text for text in texts if any(pattern.search(text) for pattern in FORBIDDEN_PATTERNS)
     ]

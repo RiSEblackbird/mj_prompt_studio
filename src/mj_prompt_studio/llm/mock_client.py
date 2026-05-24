@@ -72,15 +72,21 @@ def _intent_response(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _vocabulary_response(payload: dict[str, Any]) -> dict[str, Any]:
     text = str(payload.get("text", ""))
+    terms = _select_terms(
+        payload,
+        [
+            "premium editorial finish",
+            "restrained warm palette",
+            "refined material detail",
+            "quiet luxury atmosphere",
+            "clean commercial composition",
+        ],
+    )
     return {
         "suggestions": [
             {
                 "source": text or "高級感",
-                "terms": [
-                    "premium editorial finish",
-                    "restrained warm palette",
-                    "refined material detail",
-                ],
+                "terms": terms,
             }
         ],
         "patches": [
@@ -149,6 +155,16 @@ def _parameter_response(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _reference_response(payload: dict[str, Any]) -> dict[str, Any]:
     name = str(payload.get("name", "reference image"))
+    extracted_vocabulary = _select_terms(
+        payload,
+        [
+            "soft morning window light",
+            "clean negative space",
+            "refined ceramic texture",
+            "premium hotel breakfast atmosphere",
+            "warm natural highlights",
+        ],
+    )
     return {
         "summary": f"{name}は明るい自然光、清潔な構図、上質な質感の参照素材です。",
         "colors": ["warm ivory", "walnut brown", "muted gold", "soft blue gray"],
@@ -156,12 +172,7 @@ def _reference_response(payload: dict[str, Any]) -> dict[str, Any]:
         "composition": "tabletop composition with generous negative space",
         "material_texture": "ceramic, linen, natural bread crust",
         "suggested_mode": "style_reference",
-        "extracted_vocabulary": [
-            "soft morning window light",
-            "clean negative space",
-            "refined ceramic texture",
-            "premium hotel breakfast atmosphere",
-        ],
+        "extracted_vocabulary": extracted_vocabulary,
         "confidence": 0.86,
     }
 
@@ -209,3 +220,16 @@ def _final_audit_response(payload: dict[str, Any]) -> dict[str, Any]:
         "warnings": warnings,
         "patches": [],
     }
+
+
+def _select_terms(payload: dict[str, Any], terms: list[str]) -> list[str]:
+    amount = _vocabulary_amount(payload)
+    limit_by_amount = {"compact": 2, "standard": 3, "rich": 5}
+    return terms[: limit_by_amount.get(amount, 3)]
+
+
+def _vocabulary_amount(payload: dict[str, Any]) -> str:
+    preferences = payload.get("llm_preferences", {})
+    if not isinstance(preferences, dict):
+        return "standard"
+    return str(preferences.get("vocabulary_amount", "standard"))

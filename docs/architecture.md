@@ -63,6 +63,7 @@
 
 - Responses API adapter、MockLLM、Structured Outputs schema、Job Queue。
 - Agent名とschemaを一致させ、schema検証後にApplicationへ返す。
+- 機能別LLM設定はSQLite settingsへ保存し、Agent実行時にモデル、推論強度、語彙量として解決する。
 
 分岐条件:
 

@@ -8,6 +8,7 @@
 - Patchは適用前に差分確認を必須にする。
 - APIキー未設定時はMockLLMが同じschemaで応答する。
 - LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。
+- SettingsでAgentごとにモデル、推論強度、語彙量を保存できる。既定は `gpt-5.5`、`medium`、`standard`。
 - ログやJob payloadにはAPIキー、Token、Cookieを含めない。
 
 ## Agent一覧
@@ -32,3 +33,6 @@
 
 - [Responses API Reference](https://platform.openai.com/docs/api-reference/responses)
 - [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs)
+- [gpt-5.5](https://developers.openai.com/api/docs/models/gpt-5.5)
+- [gpt-5.4-mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini)
+- [gpt-5.4-nano](https://developers.openai.com/api/docs/models/gpt-5.4-nano)

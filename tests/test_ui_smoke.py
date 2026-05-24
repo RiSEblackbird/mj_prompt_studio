@@ -6,7 +6,7 @@ import pytest
 def test_main_window_can_be_constructed_with_mock_context(tmp_path):
     pytest.importorskip("PySide6")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QComboBox
 
     from mj_prompt_studio.app.app_context import AppContext
     from mj_prompt_studio.app.main_window import MainWindow
@@ -27,6 +27,14 @@ def test_main_window_can_be_constructed_with_mock_context(tmp_path):
     assert window.undo_action.isEnabled() is False
     assert window.redo_action.isEnabled() is False
     assert window.parameter_inspector.advice_button.text() == "AIで目的別提案"
+    table = window.settings_widget.llm_profile_table
+    assert table.rowCount() == 9
+    model_combo = table.cellWidget(0, 1)
+    reasoning_combo = table.cellWidget(0, 2)
+    assert isinstance(model_combo, QComboBox)
+    assert isinstance(reasoning_combo, QComboBox)
+    assert model_combo.currentText() == "gpt-5.5"
+    assert reasoning_combo.currentText() == "medium"
     window.close()
     context.shutdown()
     app.quit()

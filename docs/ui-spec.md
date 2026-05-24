@@ -66,6 +66,7 @@
 表示:
 
 - AIモデル設定。
+- 機能別LLM設定: モデル、推論強度、語彙量。
 - Current Rulesetのdisplay_name。
 - Response Storage / Privacy mode。
 - セッション内APIキー適用。

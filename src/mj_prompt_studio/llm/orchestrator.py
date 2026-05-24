@@ -37,14 +37,15 @@ class LLMOrchestrator:
         image_paths: list[Path] | None = None,
     ) -> AgentResult:
         model, effort = self._route(agent_name)
+        effective_payload = self._payload_with_preferences(agent_name, payload)
         if self.real_client is None:
-            mock_response = self.mock_client.create_agent_response(agent_name, payload)
+            mock_response = self.mock_client.create_agent_response(agent_name, effective_payload)
             output = mock_response.output_json
             response_id: str | None = mock_response.response_id
         else:
             openai_response = self.real_client.create_response(
                 model=model,
-                input_payload=self._build_input(agent_name, payload, image_paths or []),
+                input_payload=self._build_input(agent_name, effective_payload, image_paths or []),
                 reasoning_effort=effort,
                 text_format=schema_for_agent(agent_name),
                 previous_response_id=None if self.settings.privacy_mode else previous_response_id,
@@ -64,16 +65,19 @@ class LLMOrchestrator:
         return self._route(agent_name)
 
     def _route(self, agent_name: str) -> tuple[str, str]:
-        config = self.settings.model_config
-        if agent_name in {"ReferenceAnalyzerAgent", "ResultReviewAgent"}:
-            return config.vision_model, "high"
-        if agent_name == "FinalAuditorAgent":
-            return config.deep_review_model, "high"
-        if agent_name in {"PromptCompilerAgent", "IntentIntakeAgent", "MatrixPlannerAgent"}:
-            return config.default_model, "medium"
-        if agent_name == "VocabularyAgent":
-            return config.inline_model, "low"
-        return config.default_model, "medium"
+        profile = self.settings.feature_profile_for(agent_name)
+        return profile.model, profile.reasoning_effort
+
+    def _payload_with_preferences(
+        self, agent_name: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        profile = self.settings.feature_profile_for(agent_name)
+        preferences = {
+            "model": profile.model,
+            "reasoning_effort": profile.reasoning_effort,
+            "vocabulary_amount": profile.vocabulary_amount,
+        }
+        return {**payload, "llm_preferences": preferences}
 
     def _build_input(
         self, agent_name: str, payload: dict[str, Any], image_paths: list[Path]

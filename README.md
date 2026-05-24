@@ -63,3 +63,5 @@ make package
 ローカルDB、asset、cache、log、export、API response dumpはgit追跡対象にしません。既定の保存先はOS標準のアプリデータ領域で、`MJPS_DATA_DIR` により上書きできます。
 
 APIキーは環境変数を優先し、Settingsから保存する場合は利用可能なOS資格情報ストアへ保存します。資格情報ストアが使えない環境ではセッション内適用に限定します。
+
+Settingsでは、AI Brief、語彙補助、Prompt Doctor、Reference Analysis、Matrix Lab、Result Reviewなどの機能ごとに、使用モデル、推論強度、語彙量を保存できます。既定はすべて `gpt-5.5` / `medium` / `標準` です。

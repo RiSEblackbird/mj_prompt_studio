@@ -66,6 +66,17 @@
 - [x] `make package` によるPython配布パッケージ作成入口を追加する。
 - [x] 追加機能のUnit/UI smoke testを補強する。
 
+## 機能別LLM設定追加 2026-05-24
+
+OpenAI公式ドキュメントで `gpt-5.5`、`gpt-5.4-mini`、`gpt-5.4-nano` の位置づけを確認し、機能ごとの品質/速度調整をSettingsから保存できるようにする。
+
+- [x] AI Brief、語彙補助、Prompt Compiler、Prompt Doctor、Parameter Advisor、Reference Analysis、Matrix Lab、Result Review、Final Auditごとにモデル、推論強度、語彙量を保存する。
+- [x] 既定値は全機能 `gpt-5.5` / `medium` / `標準` とする。
+- [x] 保存済み設定をSQLiteから起動時に復元し、Job Queueのmodel/reasoning表示と実Agent実行へ反映する。
+- [x] MockLLMでも語彙量設定に応じて候補数が変わるようにする。
+- [x] 一般使用者向けマニュアル、Quick Start、LLM docs、UI spec、READMEを更新する。
+- [x] lint / typecheck / test / UI文言検査を再実行する。
+
 ## マイルストーン
 
 - [x] Task 1: アプリ基盤、UIシェル、Ruleset基盤、永続化を実装する。
@@ -133,3 +144,11 @@
 | 2026-05-24 | `.venv/bin/python scripts/verify_ui_text.py` | Done | UI/resources走査で禁止UI文言なし |
 | 2026-05-24 | `git status --short --ignored` | Done | DB、ユーザー画像、APIキー、生成パッケージは未追跡またはignore対象 |
 | 2026-05-24 | `rg -n "\\b[Vv]\\s*[0-9]+(\\.[0-9]+)?\\b|Midjourney\\s+[Vv]" src README.md docs plans \|\| true` | Done | 禁止表記ヒットなし |
+| 2026-05-24 | `make lint` | Done | 機能別LLM設定追加後、ruff: All checks passed |
+| 2026-05-24 | `make typecheck` | Done | 機能別LLM設定追加後、mypy: no issues found in 56 source files |
+| 2026-05-24 | `make test` | Done | 機能別LLM設定追加後、pytest: 24 passed |
+| 2026-05-24 | `make build` | Done | 機能別LLM設定追加後、compileall成功 |
+| 2026-05-24 | `make package` | Done | 機能別LLM設定追加後、sdist / wheel作成成功、`dist/` はgitignore対象 |
+| 2026-05-24 | `.venv/bin/python scripts/verify_ui_text.py` | Done | UI/resources走査で禁止UI文言なし |
+| 2026-05-24 | `rg -n "\\b[Vv]\\s*[0-9]+(\\.[0-9]+)?\\b|Midjourney\\s+[Vv]" src README.md docs plans \|\| true` | Done | 禁止表記ヒットなし |
+| 2026-05-24 | `git diff --check` | Done | whitespace errorなし |

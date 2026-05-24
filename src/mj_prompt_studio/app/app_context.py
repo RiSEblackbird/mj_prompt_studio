@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +49,20 @@ class AppContext:
             self.repository, self.asset_store, self.orchestrator
         )
         self.export_service = ExportService()
+
+    def set_session_api_key(self, api_key: str | None) -> None:
+        effective_settings = replace(self.settings, llm_mode="real") if api_key else self.settings
+        self.orchestrator = LLMOrchestrator(effective_settings, api_key or None)
+        self.prompt_service = PromptWorkflowService(
+            self.repository, self.ruleset, self.orchestrator
+        )
+        self.reference_service = ReferenceWorkflowService(
+            self.repository, self.asset_store, self.orchestrator
+        )
+        self.matrix_service = MatrixWorkflowService(self.repository, self.orchestrator)
+        self.result_review_service = ResultReviewWorkflowService(
+            self.repository, self.asset_store, self.orchestrator
+        )
 
     def ensure_workspace(self) -> tuple[ProjectRecord, PromptDocument]:
         return self.prompt_service.ensure_default_workspace()

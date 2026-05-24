@@ -18,6 +18,8 @@ from mj_prompt_studio.domain.matrix import MatrixPlan, MatrixVariant
 class MatrixLabWidget(QWidget):
     plan_requested = Signal(str)
     generate_requested = Signal()
+    copy_selected_requested = Signal()
+    copy_all_requested = Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -27,6 +29,8 @@ class MatrixLabWidget(QWidget):
         self.objective_edit.setPlaceholderText("実験目的を入力")
         self.plan_button = QPushButton("AIで実験計画")
         self.generate_button = QPushButton("Variant生成")
+        self.copy_selected_button = QPushButton("選択Variantをコピー")
+        self.copy_all_button = QPushButton("一括コピー")
         self.csv_button = QPushButton("CSV出力")
         self.markdown_button = QPushButton("Markdown出力")
         self.table = QTableWidget(0, 4)
@@ -35,6 +39,8 @@ class MatrixLabWidget(QWidget):
         top.addWidget(self.objective_edit, 1)
         top.addWidget(self.plan_button)
         top.addWidget(self.generate_button)
+        top.addWidget(self.copy_selected_button)
+        top.addWidget(self.copy_all_button)
         top.addWidget(self.csv_button)
         top.addWidget(self.markdown_button)
         layout = QVBoxLayout(self)
@@ -45,6 +51,8 @@ class MatrixLabWidget(QWidget):
             lambda: self.plan_requested.emit(self.objective_edit.toPlainText().strip())
         )
         self.generate_button.clicked.connect(self.generate_requested.emit)
+        self.copy_selected_button.clicked.connect(self.copy_selected_requested.emit)
+        self.copy_all_button.clicked.connect(self.copy_all_requested.emit)
 
     def set_plan(self, plan: MatrixPlan) -> None:
         self.current_plan = plan
@@ -58,3 +66,9 @@ class MatrixLabWidget(QWidget):
             self.table.setItem(row, 1, QTableWidgetItem(variant.prompt))
             self.table.setItem(row, 2, QTableWidgetItem(str(variant.parameters)))
             self.table.setItem(row, 3, QTableWidgetItem(variant.notes))
+
+    def selected_variant(self) -> MatrixVariant | None:
+        row = self.table.currentRow()
+        if row < 0 or row >= len(self.variants):
+            return None
+        return self.variants[row]

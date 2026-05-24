@@ -34,6 +34,20 @@
 - [x] ユーザー向けUI文字列にMidjourneyの具体的なバージョン番号が混入しないテストが通る。
 - [x] 不要ファイル、APIキー、DB、キャッシュ、ログ、ユーザー画像がgit追跡対象になっていない。
 
+## 再監査 2026-05-24
+
+前回実装は縦切りの骨格として動く一方、運用可能レベルとして以下が不足していたため追加改修する。
+
+- [x] AI Patchがユーザー確認なしに自動適用される問題を修正。
+- [x] Job status UIにキャンセルと再実行を追加。
+- [x] Reference Libraryにドラッグ&ドロップ、検索、タグ保存、削除確認、抽出語彙のComposer返却を追加。
+- [x] Matrix Labに選択Variantコピーと一括コピーを追加。
+- [x] Result Reviewに比較表示と改善候補のComposer Patch返却を追加。
+- [x] ToolbarのOpen / Exportを実操作に変更。
+- [x] Settingsにセッション内APIキー適用、Response Storage保存、接続テストを追加。
+- [x] SQLite migration versionとresult review / reference削除の永続化テストを追加。
+- [x] Structured Outputsのschema検証をPydanticで型検証するよう補強。
+
 ## マイルストーン
 
 - [x] Task 1: アプリ基盤、UIシェル、Ruleset基盤、永続化を実装する。
@@ -87,3 +101,8 @@
 | 2026-05-24 | `make build` | Done | compileall成功 |
 | 2026-05-24 | `.venv/bin/python scripts/verify_ui_text.py` | Done | 禁止UI文言なし |
 | 2026-05-24 | `find . -maxdepth 3 ...` | Done | git対象外のmypy cache以外にDB、log、画像、envなし |
+| 2026-05-24 | `make lint` | Done | 再監査改修後、ruff: All checks passed |
+| 2026-05-24 | `make typecheck` | Done | 再監査改修後、mypy: no issues found in 53 source files |
+| 2026-05-24 | `make test` | Done | 再監査改修後、pytest: 14 passed |
+| 2026-05-24 | `make build` | Done | 再監査改修後、compileall成功 |
+| 2026-05-24 | `.venv/bin/python scripts/verify_ui_text.py` | Done | UI/resources走査で禁止UI文言なし |

@@ -8,6 +8,7 @@ from typing import Any
 
 from mj_prompt_studio.domain.prompt_document import PromptDocument, new_id, utc_now
 from mj_prompt_studio.domain.reference import ReferenceAsset, ResultImage, ResultReview
+from mj_prompt_studio.infra.migrations import SCHEMA_VERSION, apply_migrations
 
 
 @dataclass
@@ -31,78 +32,7 @@ class SQLiteRepository:
 
     def _initialize(self) -> None:
         with self.connect() as connection:
-            connection.executescript(
-                """
-                PRAGMA journal_mode=WAL;
-                CREATE TABLE IF NOT EXISTS projects (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS prompt_documents (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    prompt_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY(project_id) REFERENCES projects(id)
-                );
-                CREATE TABLE IF NOT EXISTS prompt_revisions (
-                    id TEXT PRIMARY KEY,
-                    prompt_document_id TEXT NOT NULL,
-                    revision_number INTEGER NOT NULL,
-                    source TEXT NOT NULL,
-                    prompt_json TEXT NOT NULL,
-                    compiled_prompt TEXT NOT NULL,
-                    diff_summary TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY(prompt_document_id) REFERENCES prompt_documents(id)
-                );
-                CREATE TABLE IF NOT EXISTS reference_assets (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    reference_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    FOREIGN KEY(project_id) REFERENCES projects(id)
-                );
-                CREATE TABLE IF NOT EXISTS result_images (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    prompt_document_id TEXT NOT NULL,
-                    result_json TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS result_reviews (
-                    id TEXT PRIMARY KEY,
-                    result_image_id TEXT NOT NULL,
-                    review_json TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS llm_jobs (
-                    id TEXT PRIMARY KEY,
-                    agent_name TEXT NOT NULL,
-                    job_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS user_vocab_profiles (
-                    id TEXT PRIMARY KEY,
-                    profile_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS matrix_experiments (
-                    id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    experiment_json TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
-                """
-            )
+            apply_migrations(connection)
 
     def create_project(self, name: str) -> ProjectRecord:
         now = utc_now().isoformat()
@@ -230,6 +160,16 @@ class SQLiteRepository:
                 ),
             )
 
+    def get_reference(self, reference_id: str) -> ReferenceAsset | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT reference_json FROM reference_assets WHERE id = ?",
+                (reference_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return ReferenceAsset.from_dict(json.loads(row["reference_json"]))
+
     def list_references(self, project_id: str) -> list[ReferenceAsset]:
         with self.connect() as connection:
             rows = connection.execute(
@@ -242,6 +182,10 @@ class SQLiteRepository:
                 (project_id,),
             ).fetchall()
         return [ReferenceAsset.from_dict(json.loads(row["reference_json"])) for row in rows]
+
+    def delete_reference(self, reference_id: str) -> None:
+        with self.connect() as connection:
+            connection.execute("DELETE FROM reference_assets WHERE id = ?", (reference_id,))
 
     def save_result_image(self, result: ResultImage) -> None:
         with self.connect() as connection:
@@ -256,6 +200,19 @@ class SQLiteRepository:
                 ),
             )
 
+    def list_result_images(
+        self, project_id: str, prompt_document_id: str | None = None
+    ) -> list[ResultImage]:
+        query = "SELECT result_json FROM result_images WHERE project_id = ?"
+        params: list[str] = [project_id]
+        if prompt_document_id:
+            query += " AND prompt_document_id = ?"
+            params.append(prompt_document_id)
+        query += " ORDER BY created_at DESC"
+        with self.connect() as connection:
+            rows = connection.execute(query, tuple(params)).fetchall()
+        return [ResultImage.from_dict(json.loads(row["result_json"])) for row in rows]
+
     def save_result_review(self, review: ResultReview) -> None:
         with self.connect() as connection:
             connection.execute(
@@ -267,6 +224,17 @@ class SQLiteRepository:
                     review.created_at.isoformat(),
                 ),
             )
+
+    def list_result_reviews(self, result_image_id: str | None = None) -> list[ResultReview]:
+        query = "SELECT review_json FROM result_reviews"
+        params: tuple[str, ...] = ()
+        if result_image_id:
+            query += " WHERE result_image_id = ?"
+            params = (result_image_id,)
+        query += " ORDER BY created_at DESC"
+        with self.connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [ResultReview.from_dict(json.loads(row["review_json"])) for row in rows]
 
     def save_matrix_experiment(
         self, project_id: str, experiment_id: str, payload: dict[str, Any]
@@ -323,7 +291,13 @@ class SQLiteRepository:
             tables = connection.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
             ).fetchall()
-        return {"db_path": str(self.db_path), "tables": [row["name"] for row in tables]}
+            user_version = connection.execute("PRAGMA user_version").fetchone()[0]
+        return {
+            "db_path": str(self.db_path),
+            "schema_version": SCHEMA_VERSION,
+            "user_version": int(user_version),
+            "tables": [row["name"] for row in tables],
+        }
 
 
 def _to_json(value: Any) -> str:

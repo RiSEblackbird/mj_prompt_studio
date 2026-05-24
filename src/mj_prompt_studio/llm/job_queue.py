@@ -41,6 +41,7 @@ class LLMJobQueue:
         self._jobs: dict[str, LLMJob] = {}
         self._futures: dict[str, Future[dict[str, Any]]] = {}
         self._callbacks: dict[str, JobCallback] = {}
+        self._work_items: dict[str, JobCallable] = {}
         self._lock = Lock()
         self._on_change = on_change
 
@@ -64,6 +65,7 @@ class LLMJobQueue:
         )
         with self._lock:
             self._jobs[job.id] = job
+            self._work_items[job.id] = work
             if callback:
                 self._callbacks[job.id] = callback
         future = self._executor.submit(self._run, job.id, work)
@@ -73,10 +75,14 @@ class LLMJobQueue:
         self._notify(job)
         return job
 
-    def retry(self, job_id: str, work: JobCallable) -> LLMJob:
+    def retry(self, job_id: str) -> LLMJob:
         job = self.get(job_id)
         if job is None:
             raise KeyError(job_id)
+        with self._lock:
+            work = self._work_items.get(job_id)
+        if work is None:
+            raise ValueError(f"Job cannot be retried because work is not retained: {job_id}")
         job.retry_count += 1
         job.status = "queued"
         job.error_message = None

@@ -2,7 +2,77 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
 JsonDict = dict[str, Any]
+
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class PromptBriefModel(StrictModel):
+    intent: str
+    subject: str
+    prompt_blocks: JsonDict
+    suggested_parameters: JsonDict
+    missing_decisions: list[JsonDict]
+
+
+class VocabularyModel(StrictModel):
+    suggestions: list[JsonDict]
+    patches: list[JsonDict]
+
+
+class PromptDoctorModel(StrictModel):
+    summary: str
+    issues: list[JsonDict]
+    patches: list[JsonDict]
+    next_actions: list[str]
+
+
+class ParameterAdvisorModel(StrictModel):
+    profile_name: str
+    parameters: JsonDict
+    rationale: list[str]
+
+
+class ReferenceAnalysisModel(StrictModel):
+    summary: str
+    colors: list[str]
+    lighting: str
+    composition: str
+    material_texture: str
+    suggested_mode: str
+    extracted_vocabulary: list[str]
+    confidence: float
+
+
+class MatrixPlanModel(StrictModel):
+    objective: str
+    fixed_conditions: JsonDict
+    axes: list[JsonDict]
+    evaluation_points: list[str]
+
+
+class ResultReviewModel(StrictModel):
+    scores: JsonDict
+    strengths: list[str]
+    issues: list[str]
+    next_prompt_candidates: list[str]
+    ai_summary: str
+
+
+class FinalAuditModel(StrictModel):
+    approved: bool
+    summary: str
+    warnings: list[str]
+    patches: list[JsonDict]
+
+
+class PromptCompileModel(StrictModel):
+    compiled_prompt: str
+    rationale: list[str]
 
 
 def schema(name: str, required: list[str], properties: JsonDict) -> JsonDict:
@@ -140,6 +210,18 @@ SCHEMAS: dict[str, JsonDict] = {
     "FinalAuditorAgent": FINAL_AUDIT_SCHEMA,
 }
 
+MODELS: dict[str, type[BaseModel]] = {
+    "IntentIntakeAgent": PromptBriefModel,
+    "VocabularyAgent": VocabularyModel,
+    "PromptCompilerAgent": PromptCompileModel,
+    "PromptDoctorAgent": PromptDoctorModel,
+    "ParameterAdvisorAgent": ParameterAdvisorModel,
+    "ReferenceAnalyzerAgent": ReferenceAnalysisModel,
+    "MatrixPlannerAgent": MatrixPlanModel,
+    "ResultReviewAgent": ResultReviewModel,
+    "FinalAuditorAgent": FinalAuditModel,
+}
+
 
 def validate_schema_payload(agent_name: str, payload: JsonDict) -> None:
     schema_config = SCHEMAS[agent_name]["schema"]
@@ -147,6 +229,7 @@ def validate_schema_payload(agent_name: str, payload: JsonDict) -> None:
     missing = [key for key in required if key not in payload]
     if missing:
         raise ValueError(f"{agent_name} response is missing required keys: {', '.join(missing)}")
+    MODELS[agent_name].model_validate(payload)
 
 
 def schema_for_agent(agent_name: str) -> JsonDict:

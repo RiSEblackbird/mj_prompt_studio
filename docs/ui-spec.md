@@ -16,6 +16,7 @@
 - Prompt Blocksを手動編集。
 - `Compile` で決定論的Prompt CompilerとValidatorを実行。
 - `コピー` でCompiled Promptをクリップボードへ入れる。
+- AI Patchは候補として表示し、適用前に対象、変更前、変更後、理由を確認する。
 
 空状態:
 
@@ -31,7 +32,11 @@
 主要操作:
 
 - 画像ファイルを手動で選択してasset storeへコピー。
+- 画像ファイルをドラッグ&ドロップして取り込む。
 - AI分析で照明、色、構図、質感、推奨モード、語彙を保存。
+- タイトル、タグ、抽出語彙で検索する。
+- タグを保存し、削除時は確認ダイアログを表示する。
+- 抽出語彙をComposerへPatchとして戻す。
 - 自動アップロードや生成サービス操作は行わない。
 
 ## Matrix Lab
@@ -40,7 +45,7 @@
 
 - 実験目的からAIが軸と固定条件を提案。
 - 決定論的Generatorがvariantを展開。
-- CSV/Markdownをコピーできる。
+- 選択Variantコピー、一括コピー、CSV/Markdownコピーができる。
 
 ## Result Review
 
@@ -49,6 +54,7 @@
 - ユーザーが生成結果画像を手動取り込み。
 - 元プロンプトとparameters snapshotへ紐付け。
 - AI Review、複数画像比較の基礎、Next Prompt Candidates、Final Auditを表示。
+- Next Prompt CandidateはComposerへPatchとして戻し、適用前に確認する。
 
 ## Settings
 
@@ -57,6 +63,7 @@
 - AIモデル設定。
 - Current Rulesetのdisplay_name。
 - Response Storage / Privacy mode。
+- セッション内APIキー適用。
 - 接続テスト。
 
 UIではRulesetの内部IDを表示しない。

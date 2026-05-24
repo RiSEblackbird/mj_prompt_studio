@@ -179,6 +179,13 @@ class ReferenceWorkflowService:
     def extracted_vocabulary(self, reference: ReferenceAsset) -> list[str]:
         return reference.ai_analysis.extracted_vocabulary
 
+    def update_reference(self, reference: ReferenceAsset) -> ReferenceAsset:
+        self.repository.save_reference(reference)
+        return reference
+
+    def delete_reference(self, reference_id: str) -> None:
+        self.repository.delete_reference(reference_id)
+
 
 class MatrixWorkflowService:
     def __init__(self, repository: SQLiteRepository, orchestrator: LLMOrchestrator) -> None:
@@ -300,6 +307,11 @@ class ExportService:
                 f"- Moodboard: {len(document.references.moodboards)} item(s)",
             ]
         )
+
+    def json_snapshot(self, document: PromptDocument) -> str:
+        import json
+
+        return json.dumps(document.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
 
 
 def _blocks_from_llm(data: Any) -> PromptBlocks:

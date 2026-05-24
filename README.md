@@ -35,11 +35,12 @@ make build
 ## 主な機能
 
 - Composer: 日本語ブリーフからPromptDocument、Prompt Blocks、Compiled Promptを作成。
-- Prompt Doctor: 決定論的ValidatorとAIレビューで矛盾、不足、弱い語彙を検出。
+- Prompt Doctor: 決定論的ValidatorとAIレビューで矛盾、不足、弱い語彙を検出し、確認後にPatch適用。
 - Parameter Advisor: Rulesetに基づくパラメータ表示と目的別提案。
-- Reference Library: 参照画像を手動取り込みし、用途判定と語彙抽出を保存。
-- Matrix Lab: 実験目的からvariantを生成し、CSV/Markdownで出力。
-- Result Review: 手動取り込み画像を元プロンプトと比較し、改善候補を作成。
+- Reference Library: 参照画像を手動取り込みまたはドラッグ&ドロップし、用途判定、検索、タグ、語彙抽出を保存。
+- Matrix Lab: 実験目的からvariantを生成し、選択コピー、一括コピー、CSV/Markdownで出力。
+- Result Review: 手動取り込み画像を元プロンプトと比較し、改善候補をComposerへPatchとして戻す。
+- Jobs: LLM処理の状態表示、キャンセル、再実行。
 
 ## 禁止事項
 

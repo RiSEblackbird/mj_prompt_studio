@@ -26,6 +26,8 @@ export MJPS_LLM_MODE=real
 make run
 ```
 
+起動後にSettingsタブでセッション内APIキーを入力して接続テストすることもできます。入力したキーは永続保存しません。
+
 ## 5. 基本フロー
 
 1. Composerで日本語Briefを入力する。
@@ -35,3 +37,4 @@ make run
 5. 生成サービスへ手動コピーする。
 6. 結果画像をResult Reviewへ手動取り込みする。
 7. AI ReviewとNext Prompt Candidatesを確認する。
+8. 改善候補はComposerへPatchとして戻し、差分確認後に適用する。

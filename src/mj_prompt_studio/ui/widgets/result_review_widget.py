@@ -19,6 +19,8 @@ class ResultReviewWidget(QWidget):
     import_requested = Signal(str)
     review_requested = Signal()
     audit_requested = Signal()
+    compare_requested = Signal()
+    next_prompt_requested = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -30,6 +32,7 @@ class ResultReviewWidget(QWidget):
         self.compare_button = QPushButton("比較")
         self.next_prompt_button = QPushButton("次プロンプト作成")
         self.audit_button = QPushButton("Final Audit")
+        self.last_review: ResultReview | None = None
         row = QHBoxLayout()
         for button in [
             self.import_button,
@@ -49,12 +52,19 @@ class ResultReviewWidget(QWidget):
         layout.addLayout(body, 1)
         self.import_button.clicked.connect(self._choose_file)
         self.review_button.clicked.connect(self.review_requested.emit)
+        self.compare_button.clicked.connect(self.compare_requested.emit)
+        self.next_prompt_button.clicked.connect(self._request_next_prompt)
         self.audit_button.clicked.connect(self.audit_requested.emit)
 
     def add_result_image(self, label: str) -> None:
         self.image_list.addItem(label)
 
+    def set_result_images(self, labels: list[str]) -> None:
+        self.image_list.clear()
+        self.image_list.addItems(labels)
+
     def set_review(self, review: ResultReview) -> None:
+        self.last_review = review
         self.summary.setPlainText(
             "\n".join(
                 [
@@ -78,7 +88,15 @@ class ResultReviewWidget(QWidget):
     def set_audit(self, payload: dict[str, object]) -> None:
         self.summary.setPlainText(str(payload))
 
+    def set_comparison(self, lines: list[str]) -> None:
+        self.summary.setPlainText("\n".join(lines))
+
     def _choose_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "生成結果画像を取り込む")
         if path:
             self.import_requested.emit(path)
+
+    def _request_next_prompt(self) -> None:
+        if not self.last_review or not self.last_review.next_prompt_candidates:
+            return
+        self.next_prompt_requested.emit(self.last_review.next_prompt_candidates[0])

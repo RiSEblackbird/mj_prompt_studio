@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QGroupBox, QListWidget, QPushButton, QVBoxLayout, QWidget
 
 from mj_prompt_studio.domain.prompt_document import ValidationReport
 
 
 class PromptDoctorPanel(QWidget):
+    apply_patch_requested = Signal(int)
+
     def __init__(self) -> None:
         super().__init__()
         self.issue_list = QListWidget()
         self.patch_list = QListWidget()
         self.run_button = QPushButton("AIで改善案を生成")
         self.run_button.setObjectName("PrimaryButton")
+        self.apply_patch_button = QPushButton("選択Patchを確認して適用")
         layout = QVBoxLayout(self)
         issue_group = QGroupBox("Prompt Doctor")
         issue_layout = QVBoxLayout(issue_group)
@@ -22,6 +26,8 @@ class PromptDoctorPanel(QWidget):
         layout.addWidget(issue_group)
         layout.addWidget(patch_group)
         layout.addWidget(self.run_button)
+        layout.addWidget(self.apply_patch_button)
+        self.apply_patch_button.clicked.connect(self._emit_apply_patch)
 
     def set_validation_report(self, report: ValidationReport | None) -> None:
         self.issue_list.clear()
@@ -41,3 +47,6 @@ class PromptDoctorPanel(QWidget):
             for patch in patches:
                 if isinstance(patch, dict):
                     self.patch_list.addItem(f"{patch.get('field_path')}: {patch.get('reason')}")
+
+    def _emit_apply_patch(self) -> None:
+        self.apply_patch_requested.emit(self.patch_list.currentRow())

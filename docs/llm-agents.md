@@ -3,9 +3,11 @@
 ## 共通方針
 
 - すべてのAgent出力は `response_schemas.py` のJSON schemaで検証する。
+- ローカルではPydantic modelでも必須fieldと主要型を検証する。
 - UIはLLM結果を直接保存せず、Application ServiceがPatch、Suggestion、Reviewとして扱う。
+- Patchは適用前に差分確認を必須にする。
 - APIキー未設定時はMockLLMが同じschemaで応答する。
-- LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持つ。
+- LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。
 - ログやJob payloadにはAPIキー、Token、Cookieを含めない。
 
 ## Agent一覧

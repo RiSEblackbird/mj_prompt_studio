@@ -63,7 +63,7 @@ generate-openapi:
 	$(PYTHON) scripts/generate_openapi.py
 
 e2e:
-	cd client && npm run e2e
+	cd client && MJPS_E2E_PYTHON="$(PYTHON)" npm run e2e
 
 clean:
 	rm -rf build dist *.egg-info .pytest_cache .ruff_cache .mypy_cache htmlcov client/dist client/playwright-report client/test-results

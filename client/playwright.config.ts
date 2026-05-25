@@ -1,10 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(dirname, "..");
 const e2eDataDir = path.join(repoRoot, ".tmp", `e2e-data-${Date.now()}`);
+const localVenvPython = path.join(repoRoot, ".venv", "bin", "python");
+const pythonCommand =
+  process.env.MJPS_E2E_PYTHON ?? (fs.existsSync(localVenvPython) ? localVenvPython : "python");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -24,7 +28,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: ".venv/bin/python -m mj_prompt_studio.server.main",
+      command: `${pythonCommand} -m mj_prompt_studio.server.main`,
       cwd: repoRoot,
       env: {
         MJPS_DATA_DIR: e2eDataDir,

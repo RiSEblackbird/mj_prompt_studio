@@ -65,6 +65,12 @@ results/
 *.log
 tmp/
 temp/
+.tmp/
+client/node_modules/
+client/dist/
+client/playwright-report/
+client/test-results/
+client/coverage/
 
 # OS / editor
 .DS_Store

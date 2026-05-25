@@ -17,6 +17,7 @@ from mj_prompt_studio.config import (
     LLMFeatureProfile,
     RuntimeSettings,
     load_runtime_settings,
+    read_openai_api_key_from_environment,
     serialize_feature_profiles,
 )
 from mj_prompt_studio.domain.prompt_document import PromptDocument
@@ -40,7 +41,9 @@ class AppContext:
         self.secret_store = SecretStore()
         self.ruleset = load_standard_ruleset()
         self.settings = self._load_persisted_llm_settings(self.settings)
-        api_key = self.secret_store.read_openai_api_key()
+        api_key = (
+            self.secret_store.read_openai_api_key() or read_openai_api_key_from_environment()
+        )
         self.orchestrator = LLMOrchestrator(self.settings, api_key)
         self.job_queue = LLMJobQueue(
             max_workers=self.settings.max_parallel_jobs, on_change=self._persist_job
@@ -74,6 +77,7 @@ class AppContext:
         )
 
     def set_response_storage(self, response_storage: str) -> None:
+        self.repository.set_setting("response_storage", response_storage)
         self.settings = replace(self.settings, response_storage=response_storage)
         self.orchestrator = LLMOrchestrator(self.settings, self.orchestrator.api_key)
         self._rebuild_services()
@@ -111,6 +115,14 @@ class AppContext:
 
     def _load_persisted_llm_settings(self, settings: RuntimeSettings) -> RuntimeSettings:
         stored_profiles = self.repository.get_setting(LLM_FEATURE_PROFILES_SETTING_KEY, {})
+        stored_response_storage = self.repository.get_setting(
+            "response_storage", settings.response_storage
+        )
+        if isinstance(stored_response_storage, str) and stored_response_storage in {
+            "normal",
+            "privacy",
+        }:
+            settings = replace(settings, response_storage=stored_response_storage)
         if not isinstance(stored_profiles, dict):
             return settings
         return settings.with_feature_profiles(stored_profiles)

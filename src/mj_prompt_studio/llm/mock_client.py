@@ -39,35 +39,72 @@ def _intent_response(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "intent": "premium editorial product photography",
         "subject": subject,
-        "prompt_blocks": {
-            "intent": "premium editorial product photography",
-            "subject": "croissant, coffee cup, refined tableware",
-            "environment": "quiet luxury hotel breakfast table",
-            "composition": "generous negative space, close-to-medium tabletop layout",
-            "camera_lens": "85mm product photography, shallow depth of field",
-            "lighting": "soft morning window light, warm highlights",
-            "material_texture": "linen napkin, ceramic cup, natural bread crust",
-            "color_palette": "warm ivory, walnut brown, muted gold",
-            "style": "clean commercial editorial finish",
-            "positive_constraints": "unoccupied table, no visible person, brand-safe setting",
-        },
-        "suggested_parameters": {
-            "aspect_ratio": "4:5",
-            "raw": True,
-            "stylize": 80,
-            "chaos": 5,
-            "weird": 0,
-            "experimental": 0,
-            "seed": 123456,
-        },
+        "prompt_blocks": _prompt_blocks(
+            {
+                "intent": "premium editorial product photography",
+                "subject": "croissant, coffee cup, refined tableware",
+                "environment": "quiet luxury hotel breakfast table",
+                "composition": "generous negative space, close-to-medium tabletop layout",
+                "camera_lens": "85mm product photography, shallow depth of field",
+                "lighting": "soft morning window light, warm highlights",
+                "material_texture": "linen napkin, ceramic cup, natural bread crust",
+                "color_palette": "warm ivory, walnut brown, muted gold",
+                "style": "clean commercial editorial finish",
+                "positive_constraints": "unoccupied table, no visible person, brand-safe setting",
+            }
+        ),
+        "suggested_parameters": _parameter_payload(
+            aspect_ratio="4:5",
+            raw=True,
+            stylize=80,
+            chaos=5,
+            weird=0,
+            experimental=0,
+            seed=123456,
+        ),
         "missing_decisions": [
             {
-                "field": "camera_lens",
+                "field_path": "blocks.camera_lens",
                 "question": "寄りか俯瞰寄りかを選ぶと比較しやすくなります。",
                 "default_answer": "close-to-medium product shot",
             }
         ],
     }
+
+
+def _prompt_blocks(overrides: dict[str, Any]) -> dict[str, Any]:
+    defaults: dict[str, Any] = {
+        "intent": "",
+        "subject": "",
+        "action_state": "",
+        "environment": "",
+        "composition": "",
+        "camera_lens": "",
+        "lighting": "",
+        "material_texture": "",
+        "color_palette": "",
+        "style": "",
+        "text_in_image": [],
+        "positive_constraints": "",
+        "notes": "",
+    }
+    return {**defaults, **overrides}
+
+
+def _parameter_payload(**overrides: Any) -> dict[str, Any]:
+    defaults: dict[str, Any] = {
+        "aspect_ratio": None,
+        "raw": None,
+        "stylize": None,
+        "chaos": None,
+        "weird": None,
+        "experimental": None,
+        "tile": None,
+        "seed": None,
+        "speed_mode": None,
+        "custom": {},
+    }
+    return {**defaults, **overrides}
 
 
 def _vocabulary_response(payload: dict[str, Any]) -> dict[str, Any]:
@@ -116,8 +153,10 @@ def _doctor_response(payload: dict[str, Any]) -> dict[str, Any]:
         "issues": [
             {
                 "severity": "warning",
+                "code": "weak_composition",
                 "message": "背景とカメラ距離の指定が弱いため、結果が散る可能性があります。",
                 "field_path": "blocks.composition",
+                "suggestion": "構図、距離、背景の条件を固定します。",
             }
         ],
         "patches": [
@@ -139,13 +178,13 @@ def _parameter_response(payload: dict[str, Any]) -> dict[str, Any]:
     exploratory = "探索" in objective or "variation" in objective.lower()
     return {
         "profile_name": "Exploration Balanced" if exploratory else "Precision Balanced",
-        "parameters": {
-            "raw": not exploratory,
-            "stylize": 120 if exploratory else 80,
-            "chaos": 18 if exploratory else 5,
-            "weird": 5 if exploratory else 0,
-            "experimental": 20 if exploratory else 0,
-        },
+        "parameters": _parameter_payload(
+            raw=not exploratory,
+            stylize=120 if exploratory else 80,
+            chaos=18 if exploratory else 5,
+            weird=5 if exploratory else 0,
+            experimental=20 if exploratory else 0,
+        ),
         "rationale": [
             "商用利用を想定し、形状安定性を優先します。",
             "探索目的では多様性を少し上げます。",
@@ -181,10 +220,10 @@ def _matrix_response(payload: dict[str, Any]) -> dict[str, Any]:
     objective = str(payload.get("objective", "スタイルと構図の比較"))
     return {
         "objective": objective,
-        "fixed_conditions": {"aspect_ratio": "4:5", "seed": 123456},
+        "fixed_conditions": _parameter_payload(aspect_ratio="4:5", seed=123456),
         "axes": [
-            {"name": "stylize", "values": [60, 100, 140], "description": "スタイル強度"},
-            {"name": "chaos", "values": [0, 8], "description": "多様性"},
+            {"name": "stylize", "values": ["60", "100", "140"], "description": "スタイル強度"},
+            {"name": "chaos", "values": ["0", "8"], "description": "多様性"},
         ],
         "evaluation_points": ["prompt adherence", "style match", "commercial usability"],
     }

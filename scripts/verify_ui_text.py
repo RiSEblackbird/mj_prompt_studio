@@ -18,13 +18,14 @@ def verify() -> None:
     for root in [
         Path("src/mj_prompt_studio/ui"),
         Path("src/mj_prompt_studio/resources"),
+        Path("client/src"),
         Path("docs"),
         Path("plans"),
     ]:
         if not root.exists():
             continue
         for path in root.rglob("*"):
-            if path.suffix in {".md", ".py", ".qss", ".json"}:
+            if path.suffix in {".css", ".json", ".md", ".py", ".qss", ".ts", ".tsx"}:
                 texts.append(path.read_text(encoding="utf-8"))
     readme = Path("README.md")
     if readme.exists():

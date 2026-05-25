@@ -9,21 +9,25 @@ description = "Local desktop prompt design studio for image generation workflows
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "PySide6>=6.7",
+  "fastapi>=0.115",
   "openai>=1.99",
+  "pillow>=11.0",
   "pydantic>=2.8",
+  "python-multipart>=0.0.20",
+  "uvicorn[standard]>=0.32",
 ]
 
 [project.optional-dependencies]
 dev = [
   "build>=1.2",
+  "httpx>=0.27",
   "pytest>=8.0",
   "ruff>=0.6",
   "mypy>=1.11",
 ]
 
 [project.scripts]
-mj-prompt-studio = "mj_prompt_studio.app.main:main"
+mj-prompt-studio = "mj_prompt_studio.server.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -32,7 +36,6 @@ where = ["src"]
 mj_prompt_studio = [
   "resources/rulesets/*.json",
   "resources/templates/*.json",
-  "ui/themes/*.qss",
 ]
 
 [tool.ruff]
@@ -53,7 +56,7 @@ mypy_path = "src"
 packages = ["mj_prompt_studio"]
 
 [[tool.mypy.overrides]]
-module = ["PySide6.*", "openai.*"]
+module = ["openai.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

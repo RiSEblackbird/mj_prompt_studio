@@ -10,6 +10,9 @@
 - LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。
 - SettingsでAgentごとにモデル、推論強度、語彙量を保存できる。既定は `gpt-5.5`、`medium`、`standard`。
 - ログやJob payloadにはAPIキー、Token、Cookieを含めない。
+- React UIはAgentを直接呼ばず、`/api/agents/*` または機能別endpointからJobを作成する。
+- Job結果の永続化やPromptDocument更新はPython Application Service / Repositoryを通す。
+- 実API経路もMockLLMと同じschemaを使う。Structured Outputs向けのJSON schemaは、objectごとに `additionalProperties: false` と必須fieldを明示する。
 
 ## Agent一覧
 
@@ -28,6 +31,40 @@
 ## OpenAI Responses API
 
 実APIモードではOpenAI Python SDKのResponses APIを使い、`text.format` にJSON schemaを渡す。`Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。
+
+## Job API
+
+主なendpoint:
+
+- `/api/agents/intent-intake`
+- `/api/agents/vocabulary`
+- `/api/agents/compile-review`
+- `/api/agents/prompt-doctor`
+- `/api/agents/parameter-advisor`
+- `/api/agents/reference-analyzer`
+- `/api/agents/matrix-planner`
+- `/api/agents/result-review`
+- `/api/agents/final-audit`
+- `/api/jobs`
+- `/api/jobs/{job_id}`
+- `/api/jobs/{job_id}/cancel`
+- `/api/jobs/{job_id}/retry`
+- `/api/jobs/stream`
+
+SSEが使えない環境でもReact clientは1秒pollingでJob状態を更新する。
+
+## 実API手動検証
+
+CIではOpenAI実APIを呼ばない。納品前またはリリース前に、APIキーを設定した環境で次を確認する。
+
+1. `OPENAI_API_KEY` またはSettingsのSession API keyを設定する。
+2. `make run` でローカルAPIとReact UIを起動する。
+3. `Settings`で接続テストを実行し、成功状態になることを確認する。
+4. `Composer`で日本語briefを入力し、`AI Brief から構造化`を実行する。
+5. Jobsで `IntentIntakeAgent` が `succeeded` になり、Prompt BlocksとCompiled Promptが更新されることを確認する。
+6. Privacy modeを有効にした状態で同じ操作を行い、Responses API requestがresponse storageを使わない経路で動くことを確認する。
+
+2026-05-25時点の代表確認では、環境変数のAPIキーを使い、接続テストと `IntentIntakeAgent` のschema-valid実行が成功している。
 
 参考にした公式ドキュメント:
 

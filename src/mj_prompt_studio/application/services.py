@@ -219,7 +219,12 @@ class ReferenceWorkflowService:
         return reference
 
     def delete_reference(self, reference_id: str) -> None:
+        reference = self.repository.get_reference(reference_id)
         self.repository.delete_reference(reference_id)
+        if reference and reference.local_path:
+            path = Path(reference.local_path)
+            if path.exists():
+                path.unlink()
 
 
 class MatrixWorkflowService:

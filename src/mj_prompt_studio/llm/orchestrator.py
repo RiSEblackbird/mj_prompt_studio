@@ -82,8 +82,14 @@ class LLMOrchestrator:
     def _build_input(
         self, agent_name: str, payload: dict[str, Any], image_paths: list[Path]
     ) -> list[dict[str, Any]]:
-        content: list[dict[str, Any] | str] = [
-            f"You are {agent_name} for MJ Prompt Studio. Return only schema-valid JSON.",
+        content: list[dict[str, Any]] = [
+            {
+                "type": "input_text",
+                "text": (
+                    f"You are {agent_name} for MJ Prompt Studio. "
+                    "Return only schema-valid JSON."
+                ),
+            },
             {"type": "input_text", "text": _redacted_payload(payload)},
         ]
         content.extend(image_input_item(path) for path in image_paths)

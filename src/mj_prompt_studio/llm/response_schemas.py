@@ -75,17 +75,122 @@ class PromptCompileModel(StrictModel):
     rationale: list[str]
 
 
+def strict_object(properties: JsonDict, required: list[str] | None = None) -> JsonDict:
+    return {
+        "type": "object",
+        "required": required if required is not None else list(properties),
+        "properties": properties,
+        "additionalProperties": False,
+    }
+
+
+def string_array() -> JsonDict:
+    return {"type": "array", "items": {"type": "string"}}
+
+
+def nullable_string() -> JsonDict:
+    return {"type": ["string", "null"]}
+
+
+def nullable_integer() -> JsonDict:
+    return {"type": ["integer", "null"]}
+
+
+def nullable_boolean() -> JsonDict:
+    return {"type": ["boolean", "null"]}
+
+
+PROMPT_BLOCK_PROPERTIES: JsonDict = {
+    "intent": {"type": "string"},
+    "subject": {"type": "string"},
+    "action_state": {"type": "string"},
+    "environment": {"type": "string"},
+    "composition": {"type": "string"},
+    "camera_lens": {"type": "string"},
+    "lighting": {"type": "string"},
+    "material_texture": {"type": "string"},
+    "color_palette": {"type": "string"},
+    "style": {"type": "string"},
+    "text_in_image": string_array(),
+    "positive_constraints": {"type": "string"},
+    "notes": {"type": "string"},
+}
+
+PROMPT_PARAMETER_PROPERTIES: JsonDict = {
+    "aspect_ratio": nullable_string(),
+    "raw": nullable_boolean(),
+    "stylize": nullable_integer(),
+    "chaos": nullable_integer(),
+    "weird": nullable_integer(),
+    "experimental": nullable_integer(),
+    "tile": nullable_boolean(),
+    "seed": nullable_integer(),
+    "speed_mode": nullable_string(),
+    "custom": strict_object({}, []),
+}
+
+PROMPT_PATCH_SCHEMA = strict_object(
+    {
+        "field_path": {"type": "string"},
+        "old_value": {"type": "string"},
+        "new_value": {"type": "string"},
+        "reason": {"type": "string"},
+        "confidence": {"type": "number"},
+        "requires_user_confirmation": {"type": "boolean"},
+    }
+)
+
+MISSING_DECISION_SCHEMA = strict_object(
+    {
+        "field_path": {"type": "string"},
+        "question": {"type": "string"},
+        "default_answer": {"type": "string"},
+    }
+)
+
+VOCABULARY_SUGGESTION_SCHEMA = strict_object(
+    {
+        "source": {"type": "string"},
+        "terms": string_array(),
+    }
+)
+
+DOCTOR_ISSUE_SCHEMA = strict_object(
+    {
+        "severity": {"type": "string"},
+        "code": {"type": "string"},
+        "message": {"type": "string"},
+        "field_path": {"type": "string"},
+        "suggestion": {"type": "string"},
+    }
+)
+
+MATRIX_AXIS_SCHEMA = strict_object(
+    {
+        "name": {"type": "string"},
+        "values": string_array(),
+        "description": {"type": "string"},
+    }
+)
+
+RESULT_SCORE_SCHEMA = strict_object(
+    {
+        "prompt_adherence": {"type": "number"},
+        "composition": {"type": "number"},
+        "style_match": {"type": "number"},
+        "material_quality": {"type": "number"},
+        "text_accuracy": {"type": "number"},
+        "commercial_usability": {"type": "number"},
+    }
+)
+
+
 def schema(name: str, required: list[str], properties: JsonDict) -> JsonDict:
     return {
         "type": "json_schema",
         "name": name,
         "strict": True,
-        "schema": {
-            "type": "object",
-            "required": required,
-            "properties": properties,
-            "additionalProperties": False,
-        },
+        "schema": strict_object(properties, required),
     }
 
 
@@ -95,9 +200,9 @@ PROMPT_BRIEF_SCHEMA = schema(
     {
         "intent": {"type": "string"},
         "subject": {"type": "string"},
-        "prompt_blocks": {"type": "object"},
-        "suggested_parameters": {"type": "object"},
-        "missing_decisions": {"type": "array", "items": {"type": "object"}},
+        "prompt_blocks": strict_object(PROMPT_BLOCK_PROPERTIES),
+        "suggested_parameters": strict_object(PROMPT_PARAMETER_PROPERTIES),
+        "missing_decisions": {"type": "array", "items": MISSING_DECISION_SCHEMA},
     },
 )
 
@@ -105,8 +210,8 @@ VOCABULARY_SCHEMA = schema(
     "vocabulary_suggestions",
     ["suggestions", "patches"],
     {
-        "suggestions": {"type": "array", "items": {"type": "object"}},
-        "patches": {"type": "array", "items": {"type": "object"}},
+        "suggestions": {"type": "array", "items": VOCABULARY_SUGGESTION_SCHEMA},
+        "patches": {"type": "array", "items": PROMPT_PATCH_SCHEMA},
     },
 )
 
@@ -115,8 +220,8 @@ PROMPT_DOCTOR_SCHEMA = schema(
     ["summary", "issues", "patches", "next_actions"],
     {
         "summary": {"type": "string"},
-        "issues": {"type": "array", "items": {"type": "object"}},
-        "patches": {"type": "array", "items": {"type": "object"}},
+        "issues": {"type": "array", "items": DOCTOR_ISSUE_SCHEMA},
+        "patches": {"type": "array", "items": PROMPT_PATCH_SCHEMA},
         "next_actions": {"type": "array", "items": {"type": "string"}},
     },
 )
@@ -126,7 +231,7 @@ PARAMETER_ADVISOR_SCHEMA = schema(
     ["profile_name", "parameters", "rationale"],
     {
         "profile_name": {"type": "string"},
-        "parameters": {"type": "object"},
+        "parameters": strict_object(PROMPT_PARAMETER_PROPERTIES),
         "rationale": {"type": "array", "items": {"type": "string"}},
     },
 )
@@ -160,8 +265,8 @@ MATRIX_PLAN_SCHEMA = schema(
     ["objective", "fixed_conditions", "axes", "evaluation_points"],
     {
         "objective": {"type": "string"},
-        "fixed_conditions": {"type": "object"},
-        "axes": {"type": "array", "items": {"type": "object"}},
+        "fixed_conditions": strict_object(PROMPT_PARAMETER_PROPERTIES),
+        "axes": {"type": "array", "items": MATRIX_AXIS_SCHEMA},
         "evaluation_points": {"type": "array", "items": {"type": "string"}},
     },
 )
@@ -170,7 +275,7 @@ RESULT_REVIEW_SCHEMA = schema(
     "result_review",
     ["scores", "strengths", "issues", "next_prompt_candidates", "ai_summary"],
     {
-        "scores": {"type": "object"},
+        "scores": RESULT_SCORE_SCHEMA,
         "strengths": {"type": "array", "items": {"type": "string"}},
         "issues": {"type": "array", "items": {"type": "string"}},
         "next_prompt_candidates": {"type": "array", "items": {"type": "string"}},
@@ -185,7 +290,7 @@ FINAL_AUDIT_SCHEMA = schema(
         "approved": {"type": "boolean"},
         "summary": {"type": "string"},
         "warnings": {"type": "array", "items": {"type": "string"}},
-        "patches": {"type": "array", "items": {"type": "object"}},
+        "patches": {"type": "array", "items": PROMPT_PATCH_SCHEMA},
     },
 )
 

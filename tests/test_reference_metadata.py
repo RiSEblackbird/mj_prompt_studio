@@ -1,19 +1,14 @@
 from pathlib import Path
 
-import pytest
+from PIL import Image
 
 from mj_prompt_studio.app.app_context import AppContext
 from mj_prompt_studio.config import LLMModelConfig, RuntimeSettings
 
 
 def test_reference_import_records_local_image_metadata(tmp_path: Path) -> None:
-    pytest.importorskip("PySide6")
-    from PySide6.QtGui import QColor, QImage
-
     image_path = tmp_path / "reference.png"
-    image = QImage(20, 10, QImage.Format.Format_RGB32)
-    image.fill(QColor("#F2E7D8"))
-    assert image.save(str(image_path))
+    Image.new("RGB", (20, 10), "#F2E7D8").save(image_path)
 
     context = AppContext(
         RuntimeSettings(

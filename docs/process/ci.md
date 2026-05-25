@@ -10,7 +10,14 @@ Ubuntu上で以下を実行する。
 - `make typecheck`
 - `make test`
 - `make build`
+- `make client-install`
+- `make client-lint`
+- `make client-typecheck`
+- `make client-test`
+- `make client-build`
+- `make e2e`
 - `make package`
+- `make generate-openapi`
 - `python scripts/verify_ui_text.py`
 - ユーザー向け文書とUI文字列への禁止バージョン表記混入チェック
 
@@ -22,5 +29,7 @@ macOSとWindowsで以下を実行する。
 
 - `python -m pytest`
 - `python -m compileall -q src`
+- `cd client && npm run build`
+- 必要に応じて `cd client && npx playwright install chromium` の後にE2Eを実行する。
 
-PySide6のGUI smoke testは `QT_QPA_PLATFORM=offscreen` で実行する。
+UIはReact client + localhost Python APIで検証する。PySide6 GUI smoke testは廃止済み。

@@ -15,6 +15,8 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
+Apple Silicon で `incompatible architecture (have 'arm64', need 'x86_64')` が出る場合は、Terminal や conda が x86_64 (Rosetta) で動いています。Terminal の「Rosetta で開く」をオフにするか、`arch -arm64 python3 -m venv .venv` で venv を作り直してください。`make run` はこの不一致を検知して arm64 で起動します。
+
 APIキーがない場合でも、既定ではモックLLMで主要フローを確認できます。端末の環境変数 `OPENAI_API_KEY` にAPIキーがある場合は、起動時に自動で実API利用に切り替わります。
 
 ```bash

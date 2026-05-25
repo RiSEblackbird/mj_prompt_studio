@@ -2,6 +2,16 @@
 
 PYTHON ?= $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 
+# Apple Silicon では Rosetta/x86_64 の Python が arm64 向け wheel を読めず pydantic 等が落ちる。
+ifeq ($(shell uname -s 2>/dev/null),Darwin)
+  ifeq ($(shell sysctl -n hw.optional.arm64 2>/dev/null),1)
+    PY_MACHINE := $(shell $(PYTHON) -c 'import platform; print(platform.machine())' 2>/dev/null || echo unknown)
+    ifeq ($(PY_MACHINE),x86_64)
+      PYTHON := arch -arm64 $(PYTHON)
+    endif
+  endif
+endif
+
 format:
 	$(PYTHON) -m ruff format src scripts tests
 	$(PYTHON) -m ruff check --fix src scripts tests

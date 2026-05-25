@@ -23,21 +23,54 @@ env/
 !.env.example
 *.key
 *.pem
+*.p12
+*.pfx
+*.token
+secrets/
+secrets.json
+credentials.json
+api_keys.json
+.netrc
+
+# SSH / cloud credential files (accidental copy into repo)
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519*
+*.ppk
+service-account*.json
+*-credentials.json
 
 # MJ Prompt Studio local data
 *.sqlite
 *.sqlite3
+*.sqlite-wal
+*.sqlite-shm
 *.db
+*.db-journal
+mj_prompt_studio.sqlite3
+settings.json
+settings.local.json
+data/
 assets/
 cache/
 logs/
 exports/
 screenshots/
 api_response_dumps/
+references/
+results/
 *.mjps
 *.mjpson
+*.log
+tmp/
+temp/
 
 # OS / editor
 .DS_Store
 .idea/
 .vscode/
+*.swp
+*~
+*.bak
+*.backup

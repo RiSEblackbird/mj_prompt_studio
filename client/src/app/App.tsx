@@ -1,9 +1,14 @@
 import {
   Download,
+  FilePenLine,
   FolderOpen,
+  Grid3X3,
+  Images,
   Library,
+  PenLine,
   Plus,
   RotateCcw,
+  ScanSearch,
   Settings,
   Sparkles,
   Undo2
@@ -53,13 +58,13 @@ type PendingConfirm =
   | { kind: "parameters"; payload: JsonObject }
   | { kind: "delete-reference"; reference: ReferenceAsset };
 
-const tabs: { id: TabId; label: string }[] = [
-  { id: "composer", label: "Composer" },
-  { id: "free-editor", label: "Free Editor" },
-  { id: "matrix-lab", label: "Matrix Lab" },
-  { id: "reference-library", label: "Reference Library" },
-  { id: "result-review", label: "Result Review" },
-  { id: "settings", label: "Settings" }
+const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
+  { id: "composer", label: "Composer", icon: <PenLine size={15} /> },
+  { id: "free-editor", label: "Free Editor", icon: <FilePenLine size={15} /> },
+  { id: "matrix-lab", label: "Matrix Lab", icon: <Grid3X3 size={15} /> },
+  { id: "reference-library", label: "Reference Library", icon: <Images size={15} /> },
+  { id: "result-review", label: "Result Review", icon: <ScanSearch size={15} /> },
+  { id: "settings", label: "Settings", icon: <Settings size={15} /> }
 ];
 
 export function App() {
@@ -620,6 +625,7 @@ export function App() {
             className={activeTab === tab.id ? "active" : ""}
             onClick={() => setActiveTab(tab.id)}
           >
+            {tab.icon}
             {tab.label}
           </button>
         ))}
